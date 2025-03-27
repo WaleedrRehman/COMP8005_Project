@@ -1,0 +1,11 @@
+Checking supported hashing methods...
+
+Supported hashing methods: yescrypt, bcrypt, sha512crypt, sha256crypt, md5crypt
+
+Hashing password 'abc' with supported methods...
+
+yescrypt ($y$j9T$9sRmOj.GvY59Ipur): $y$j9T$9sRmOj.GvY59Ipur$uS7/.7NCsvd0J.09dz4oo644qt5mx5fx1q61BvKT2R.
+bcrypt ($2b$12$PuTe/ic7eSi6EzNc0gresK): $2b$12$PuTe/ic7eSi6EzNc0gres.LUNo6zC.ifiSNZJTYdRi.lSQFc0rJLG
+sha512crypt ($6$Ljw24JvSYu/UKGi3): $6$Ljw24JvSYu/UKGi3$PsFHGlhAWA/gQRDn1f6T1ugmH6w4SLcvvsz.J/rGmKy8SSE3pMCfJbXHRmGGSdJiNJKVURLhUge4p7WLTd4PP0
+sha256crypt ($5$x562Y3G8H8Adl9sY): $5$x562Y3G8H8Adl9sY$eSxLk9WWc4LqYHsWQbyIaYMYCRhwpFcmg4U7tvfIrU8
+md5crypt ($1$BctA.Ld0UuZf.xbk): $1$BctA.Ld0$Mwqvbnk0S1DGhIlTWbFLh1

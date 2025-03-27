@@ -1,0 +1,3 @@
+/home/waleed/COMP8005/COMP8005_Assign_3/build/CMakeFiles/COMP8005_Assign_3.dir
+/home/waleed/COMP8005/COMP8005_Assign_3/build/CMakeFiles/edit_cache.dir
+/home/waleed/COMP8005/COMP8005_Assign_3/build/CMakeFiles/rebuild_cache.dir
