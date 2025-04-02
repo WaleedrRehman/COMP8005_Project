@@ -6,23 +6,82 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-
-bool password_found = false;
+#include <bits/stdc++.h>
+#include "Message.h"
 
 using namespace std;
 
-struct WorkerInfo {
-    int socket;
-    long long start_ascii;
-    long long end_ascii;
-    string last_checkpoint;
-};
+#define MAX_CLIENTS 10
+
+string correct_password;
+vector <int> node_sockets;
+atomic<bool> password_found(false);
+static priority_queue<pair<long long, long long>> checkpoints; // Stores checkpoints received.
+static pair <long long, long long> cur_pwd;
+
+/**
+ * Finds the range given the start and the size of the range
+ * @param start_idx Starting point of the range
+ * @param size of the range
+ * @return Range [start_idx, start_idx + size]
+ */
+pair<long long, long long> get_range(long long start_idx, long long size) {
+    long long end_idx = start_idx + size - 1;
+    return {start_idx, end_idx};
+}
+
+/**
+ * Receives the message from the given socket.
+ * @param client_socket
+ * @param msg
+ * @return bool Whether any message was received.
+ */
+bool recv_message(int client_socket, Message &msg) {
+    uint32_t  size;
+
+    if (recv(client_socket, &size, sizeof (size), MSG_WAITALL) <= 0) {
+        cerr << "Failed to receive message size or client disconnected." << endl;
+        return false;
+    }
+
+    string buffer(size, '\0');
+    if (recv(client_socket, buffer.data(), size, MSG_WAITALL) <= 0) {
+        cerr << "Failed to receive full message" << endl;
+        return false;
+    }
+    msg = Message::deserialize(buffer);
+    return true;
+}
+
+/**
+ * Sends message to the client socket given.
+ * @param client_socket The node's socket id.
+ * @param msg Encapsulates information to send to the node.
+ */
+void send_message(int client_socket, const Message &msg) {
+    string  serialized = msg.serialize();
+    uint32_t  size = serialized.size();
+
+    send(client_socket, &size, sizeof(size), 0);
+    send(client_socket, serialized.c_str(), serialized.size(), 0);
+}
 
 
-//pair<long long, long long> generate_next_range(
-//        long long range_size, long long range_start, long long range_end) {
-//    static long long range_start = 0;
-//}
+void handle_worker(int client_socket) {
+    Message msg;
+
+    if (!recv_message(client_socket, msg)) {
+        close(client_socket);
+        return;
+    }
+
+    if (msg.type == Message::REQUEST) {
+        static long long next_rng_start = 0;
+
+    }
+
+
+}
 
 void start_server(int port) {
     int server_socket = socket(AF_INET6, SOCK_STREAM, 0);
@@ -46,7 +105,7 @@ void start_server(int port) {
         exit(1);
     }
 
-    listen(server_socket, 10);
+    listen(server_socket, MAX_CLIENTS);
     cout << "Server listening on port " << port << " (IPv4 & IPv6)\n";
 
     while(!password_found) {
@@ -54,17 +113,24 @@ void start_server(int port) {
         socklen_t client_size = sizeof(client_addr);
         int client_socket = accept(server_socket, (sockaddr *)&client_addr, &client_size);
 
-        if (client_socket >= 0) {
-//            char* buffer = "hello";
-            send(client_socket,"Hello", 5, 0);
+        if (client_socket < 0) {
+            cerr << "Socket closed or unavailable.\n";
+        } else {
+            node_sockets.push_back(client_socket);
+            handle_worker(client_socket);
+
         }
     }
 
     close(server_socket);
 }
 
+
+
+
+
 int main(int argc, char *argv[]){
-    if (argc != 6) {
+    if (argc != 3) {
         cerr << "Usage: " << argv[0] << " --port --hash --work-size --checkpoint --timeout\n";
         return 1;
     }
@@ -74,6 +140,8 @@ int main(int argc, char *argv[]){
     int work_size = stoi(argv[3]);
     int checkpoint = stoi(argv[4]);
     int timeout = stoi(argv[5]);
+
+
 
 
     start_server(port);
