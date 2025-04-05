@@ -14,12 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Add executable
 add_executable(COMP8005_Assign_3
-#        node.cpp
-#        node_worker.cpp
-#        server.cpp
+        server.cpp
         Message.cpp
         Message.h
+        controller.cpp
+        #        node.cpp
 )
 
-# Link OpenMP and libcrypt
-#target_link_libraries(COMP8005_Assign_3 PRIVATE OpenMP::OpenMP_CXX crypt)
+# Link libcrypt
+target_link_libraries(COMP8005_Assign_3 PRIVATE crypt)

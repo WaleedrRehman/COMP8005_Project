@@ -194,36 +194,32 @@ void execute_python_script(const string &password) {
     system(command.c_str());
 }
 
-void brute_force_attack_password(const char *hashed_password, int num_threads) {
-    char salt[64];
-
-}
 
 
 int main(int argc, char *argv[]) {
 
-    if (argc < 2) {
-        cerr << "Usage: " << argv[0] << " <Hashed Password> <num_threads>\n";
-        return 1;
-    }
+//    if (argc < 2) {
+//        cerr << "Usage: " << argv[0] << " <Hashed Password> <num_threads>\n";
+//        return 1;
+//    }
+//
+////    string password = argv[1];
+//    int num_threads = stoi(argv[1]);
+//    if (num_threads < 1) {
+//        cerr << "Error: At least 1 thread needed to run. \n";
+//        return 1;
+//    }
 
-//    string password = argv[1];
-    int num_threads = stoi(argv[1]);
-    if (num_threads < 1) {
-        cerr << "Error: At least 1 thread needed to run. \n";
-        return 1;
-    }
-
-    omp_set_num_threads(num_threads);
+    omp_set_num_threads(4);
 
 //    cout << "Generating hashes for password: " << password << "...\n";
 //    execute_python_script(password);
-
-    ifstream hash_file("hashes.txt");
-    if (!hash_file) {
-        cerr << "Error: Could not open hashes.txt\n";
-        return 1;
-    }
+//
+//    ifstream hash_file("hashes.txt");
+//    if (!hash_file) {
+//        cerr << "Error: Could not open hashes.txt\n";
+//        return 1;
+//    }
 
 
 //    string line;
@@ -247,8 +243,8 @@ int main(int argc, char *argv[]) {
 //    }
 
 
-    cout << "Using " << num_threads << " threads for a brute force attack.\n";
-    const char *test_hash = "$2b$05$lebCuLCIDyZ8pRx7f3.Gj.L8bdOpxeZZPUsIzCmgoq4MV3SGlQVQK";
+    cout << "Using " << 4 << " threads for a brute force attack.\n";
+    const char *test_hash = "$1$GWTqFA9G$/ShqcBJ5MVEJlSh0Q9LUi.";
     const char *hash_type = get_hash_type(test_hash);
     cout << "Hash Type: " << hash_type << endl;
     brute_force_attack_passwordgen(test_hash);
