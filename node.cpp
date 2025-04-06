@@ -14,21 +14,16 @@
 #include <algorithm>
 #include <mutex>
 #include <unistd.h>
-
-
 using namespace std;
 
 long long start_range, end_range, checkpoint;
-
 atomic<bool> password_found(false);
 atomic<long long> total_guesses(0);
 vector<thread> worker_threads;
 mutex checkpoint_mtx;
 mutex mtx;
-
 int worker_socket;
 string hashed_password, salt;
-
 vector<string> messages_text {"SETUP", "REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP", "CONTINUE"};
 
 void divide_work(int num_threads);
@@ -64,7 +59,6 @@ bool recv_message(int client_socket, Message &msg) {
         cerr << "Failed to receive message size or client disconnected." << endl;
         return false;
     }
-
     string buffer(size, '\0');
     if (recv(client_socket, buffer.data(), size, MSG_WAITALL) <= 0) {
         cerr << "Failed to receive full message" << endl;
@@ -102,23 +96,19 @@ void start_conn(const string &server_ip, int server_port) {
         sock = socket(AF_INET, SOCK_STREAM, 0);
         ipv6 = false;
     }
-
     if (sock == -1) {
         perror("Socket Failed!");
         exit(1);
     }
-
     if (ipv6) {
         struct sockaddr_in6 server_addr{};
         server_addr.sin6_family = AF_INET6;
         server_addr.sin6_port = htons(server_port);
-
         if (inet_pton(AF_INET6, server_ip.c_str(), &server_addr.sin6_addr) <= 0) {
             cerr << "Invalid IPv6 address format. \n";
             close(sock);
             return;
         }
-
         if (connect(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) <= 0) {
             cerr << "IPv6 connection failed with " << server_ip << " on port: " << server_port << endl;
             close(sock);
@@ -128,20 +118,17 @@ void start_conn(const string &server_ip, int server_port) {
         struct sockaddr_in server_addr4{};
         server_addr4.sin_family = AF_INET;
         server_addr4.sin_port = htons(server_port);
-
         if (inet_pton(AF_INET, server_ip.c_str(), &server_addr4.sin_addr) <= 0) {
             cerr << "Invalid IPv4 address format. \n";
             close(sock);
             return;
         }
-
         if (connect(sock, (struct sockaddr *) &server_addr4, sizeof(server_addr4)) < 0) {
             cerr << "IPv4 connection failed with " << server_ip << " on port: " << server_port << endl;
             close(sock);
             return;
         }
     }
-
     cout << "Connected to server: " << server_ip << " on port: " << server_port << endl;
     worker_socket = sock;
 }
@@ -149,29 +136,24 @@ void start_conn(const string &server_ip, int server_port) {
 bool receive_setup() {
     Message req{Message::REQUEST};
     send_message(worker_socket, req);
-
+    cout << "Requesting Work" << endl;
     Message resp;
     if (!recv_message(worker_socket, resp)) {
         cerr << "Failed to receive SETUP message from server.\n";
         return false;
     }
-
     if (resp.type != Message::SETUP || !resp.Setup_Data) {
         cerr << "Invalid SETUP message received.\n";
     }
-
     hashed_password = resp.Setup_Data->hashed_password;
     salt = resp.Setup_Data->salt;
     checkpoint = resp.Setup_Data->checkpoint;
-
     cout << "Received SETUP message:\n";
     cout << "Hashed Password: " << hashed_password << endl;
     cout << "Salt: " << salt << endl;
     cout << "Checkpoint: " << checkpoint << endl;
-
     return true;
 }
-
 
 /**
  * Requests work from the server.
@@ -179,19 +161,15 @@ bool receive_setup() {
  */
 void request_work(int num_threads) {
     cout << "Requesting Work" << endl;
-
     bool success = false;
     int retries = 0;
     const int MAX_RETRIES = 5;
-
     while (!success && retries < MAX_RETRIES) {
         Message request_msg(Message::REQUEST);
         send_message(worker_socket, request_msg);
-
         Message resp;
         bool received = recv_message(worker_socket, resp);
         cout << messages_text[resp.type] << endl;
-
         if (received && resp.type == Message::ASSIGN
             && resp.Assign_Data) {
             start_range = resp.Assign_Data->range.first;
@@ -204,7 +182,6 @@ void request_work(int num_threads) {
             retries++;
         }
     }
-
     if (!success) {
         cerr << "Max retries reached. Couldn't receive valid setup or assign data. Attempting to reconnect...\n";
         close(worker_socket);
@@ -220,10 +197,8 @@ void request_work(int num_threads) {
 void crack_password(int node_id, long long start, long long end, vector<pair<long long, long long>> *ranges) {
     struct crypt_data crypt_buffer{};
     crypt_buffer.initialized = 0;
-
     long long guesses_made = 0;
     long long current_start = start;
-
     for (long long i = start; i <= end && !password_found; ++i) {
         string password_guess = index_to_password(i);
         const char *gen_hash = crypt_r(password_guess.c_str(), salt.c_str(), &crypt_buffer);
@@ -232,7 +207,6 @@ void crack_password(int node_id, long long start, long long end, vector<pair<lon
             cerr << "Error: crypt_r() failed for password: " << password_guess << endl;
             continue;
         }
-
         guesses_made++;
         total_guesses++;
 
@@ -248,7 +222,6 @@ void crack_password(int node_id, long long start, long long end, vector<pair<lon
             }
             return;
         }
-
         if (guesses_made % checkpoint == 0) {
             lock_guard<mutex> lock(checkpoint_mtx);
             ranges->clear();
@@ -259,13 +232,11 @@ void crack_password(int node_id, long long start, long long end, vector<pair<lon
                 cout << "Checkpoint Range: " << range.first << "-" << range.second << endl;
             }
             send_message(worker_socket, checkpoint_msg);
-
             Message resp;
             if (!recv_message(worker_socket, resp)) {
                 cerr << "Failed to receive response to checkpoint.\n";
                 return;
             }
-
             if (resp.type == Message::STOP) {
                 cout << "STOP message received. Shutting down...\n";
                 password_found = true;
@@ -280,7 +251,6 @@ void crack_password(int node_id, long long start, long long end, vector<pair<lon
             current_start = i + 1;
         }
     }
-
     if (!password_found && current_start <= end) {
         lock_guard<mutex> lock(checkpoint_mtx);
         ranges->clear();
@@ -304,7 +274,6 @@ void crack_password(int node_id, long long start, long long end, vector<pair<lon
     }
 }
 
-
 /**
  * Divides the workload between the threads based on the number of threads.
  */
@@ -318,9 +287,7 @@ void divide_work(int num_threads) {
         long long thread_start = start_range + i * range_per_thread;
         long long thread_end = (i == num_threads - 1)
                                ? end_range : min(thread_start + range_per_thread - 1, end_range);
-
         cout << "Thread " << i << " -> Start: " << thread_start << ", End: " << thread_end << endl;
-
         try {
             worker_threads.emplace_back(crack_password, i, thread_start, thread_end, &attempted_ranges);
         } catch (const std::system_error &e) {
@@ -328,7 +295,6 @@ void divide_work(int num_threads) {
             exit(1);
         }
     }
-
     for (auto &thread: worker_threads) {
         thread.join();
     }
@@ -340,7 +306,6 @@ int main(int argc, char *argv[]) {
         cerr << "Usage: " << argv[0] << " --server --port --thread\n";
         return 1;
     }
-
     string server_ip = argv[1];
     int server_port = stoi(argv[2]);
     int num_threads = stoi(argv[3]);
@@ -348,8 +313,6 @@ int main(int argc, char *argv[]) {
         cerr << "Error: At least 1 thread needed to run. \n";
         return 1;
     }
-
-
     cout << "Server IP: " << server_ip << endl;
     cout << "Server Port: " << server_port << endl;
     cout << "Number of Threads: " << num_threads << endl;
@@ -361,16 +324,13 @@ int main(int argc, char *argv[]) {
         close(worker_socket);
         return 1;
     }
-
     while (true) {
         request_work(num_threads);
-
         Message stop_msg;
         if (recv_message(worker_socket, stop_msg) && stop_msg.type == Message::STOP) {
             cout << "Received STOP signal from server. Exiting...\n";
             break;
         }
-
         if (password_found) {
             cout << "Password Found. Stopping worker node.\n";
             break;

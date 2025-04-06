@@ -14,10 +14,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Add executable
 add_executable(COMP8005_Assign_3
-        server.cpp
+#        server.cpp
         Message.cpp
         Message.h
         controller.cpp
+#        test.cpp
         #        node.cpp
 )
 
