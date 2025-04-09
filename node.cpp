@@ -165,6 +165,10 @@ bool request_work(int num_threads, string& hashed_password, string& salt) {
 
         cout << "Range received: " << start_range << "-" << end_range << endl;
         return divide_work(num_threads, hashed_password, salt, start_range, end_range);
+    } else if (received && resp.type == Message::STOP) {
+        cout << "[!] Received STOP from server. Exiting..." << endl;
+        password_found = true;
+        return false;
     }
 
     return false;
@@ -283,7 +287,6 @@ void checkpoint_handler(int sock) {
                     range.first = range.second + 1;
                 }
             }
-
         }
     }
 }
@@ -354,17 +357,14 @@ int main(int argc, char *argv[]) {
         }
 
         Message stop_msg;
-        if (recv_message(worker_socket, stop_msg) && stop_msg.type == Message::STOP) {
-            cout << "Received STOP signal from server. Exiting...\n";
-            break;
+        if (!work_done) {
+            if (recv_message(worker_socket, stop_msg) && stop_msg.type == Message::STOP) {
+                cout << "Received STOP signal from server. Exiting...\n";
+                break;
+            }
         }
 
-        if (work_done) {
-            cout << "Work Finished. " << endl;
-            continue;
-        }
-
-        this_thread::sleep_for(chrono::milliseconds(500));
+        this_thread::sleep_for(chrono::milliseconds(100));
 
     }
 

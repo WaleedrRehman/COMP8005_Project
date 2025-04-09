@@ -51,7 +51,7 @@ constexpr int ASCII_RANGE = 256;
  * @param size
  * @return
  */
-pair<long long, long long> dget_range(long long start_idx, long long size) {
+pair<long long, long long> get_range(long long start_idx, long long size) {
     return {start_idx, start_idx + size - 1};
 }
 
