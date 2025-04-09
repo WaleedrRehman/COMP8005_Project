@@ -49,8 +49,15 @@ Message::Message(Message::MessageType type, const Message::Found &Found_Data) {
  * @return String representation of the Assign struct.
  */
 string Message::Assign::serialize() const {
-    return to_string(node_id) + "," + to_string(checkpoint) + "," +
-    to_string(range.first) + "-" + to_string(range.second) + "," + hashed_password + "," + salt;
+    string result;
+    result.reserve(64 + hashed_password.size() + salt.size());
+    result.append(to_string(node_id)).append(",")
+          .append(to_string(checkpoint)).append(",")
+          .append(to_string(range.first)).append("-")
+          .append(to_string(range.second)).append(",")
+          .append(hashed_password).append(",")
+          .append(salt);
+    return result;
 }
 
 /**
@@ -59,21 +66,20 @@ string Message::Assign::serialize() const {
  * @return
  */
 Message::Assign Message::Assign::deserialize(const std::string &data) {
-    istringstream ss(data);
-    int node_id;
-    long long checkpoint;
-    char delim;
+    size_t pos1 = data.find(',');
+    size_t pos2 = data.find(',', pos1 + 1);
+    size_t pos3 = data.find(',', pos2 + 1);
+    size_t pos4 = data.find(',', pos3 + 1);
 
-    string  range_str, hashed_password, salt;
-
-    ss >> node_id >> delim >> checkpoint >> delim;
-    getline(ss, range_str, ',');
-    getline(ss, hashed_password, ',');
-    getline(ss, salt);
-
+    int node_id = stoi(data.substr(0, pos1));
+    long long checkpoint = stoll(data.substr(pos1 + 1, pos2 - pos1 - 1));
+    string range_str = data.substr(pos2 + 1, pos3 - pos2 - 1);
     size_t dash = range_str.find('-');
     long long start = stoll(range_str.substr(0, dash));
     long long end = stoll(range_str.substr(dash + 1));
+
+    string hashed_password = data.substr(pos3 + 1, pos4 - pos3 -1);
+    string  salt = data.substr(pos4 + 1);
 
     return {node_id, checkpoint, {start, end}, hashed_password, salt};
 }
@@ -85,12 +91,13 @@ Message::Assign Message::Assign::deserialize(const std::string &data) {
  * @return
  */
 string  Message::Checkpoint::serialize() const {
-    ostringstream ss;
-    ss << node_id;
-    for (const auto &r: ranges) {
-        ss << ":" << r.first << "-" << r.second;
+    string result;
+    result.reserve(16 + ranges.size() * 24);
+    result.append(to_string(node_id));
+    for (const auto &r : ranges) {
+        result.append(":").append(to_string(r.first)).append("-").append(to_string(r.second));
     }
-    return ss.str();
+    return result;
 }
 
 /**
@@ -99,22 +106,27 @@ string  Message::Checkpoint::serialize() const {
  * @return
  */
 Message::Checkpoint Message::Checkpoint::deserialize(const std::string &data) {
-    size_t colon_pos = data.find(':');
-    int node_id = stoi(data.substr(0, colon_pos));
+    size_t colon = data.find(':');
+    int node_id = stoi(data.substr(0, colon));
+
     vector<pair<long long, long long>> ranges;
+    size_t start = colon + 1, end;
 
-    string ranges_part = data.substr(colon_pos + 1);
-    istringstream ss(ranges_part);
-    string range_str;
-
-    while (getline(ss, range_str, ':')) {
-        size_t dash = range_str.find('-');
-        if (dash != string::npos) {
-            long long start = stoll(range_str.substr(0, dash));
-            long long end = stoll(range_str.substr(dash + 1));
-            ranges.emplace_back(start, end);
-        }
+    while ((end = data.find(':', start)) != string::npos) {
+        size_t dash = data.find('-', start);
+        long long r1 = stoll(data.substr(start, dash - start));
+        long long r2 = stoll(data.substr(dash + 1, end - dash - 1));
+        ranges.emplace_back(r1, r2);
+        start = end + 1;
     }
+
+    if (start < data.length()) {
+        size_t dash = data.find('-', start);
+        long long r1 = stoll(data.substr(start, dash - start));
+        long long r2 = stoll(data.substr(dash + 1));
+        ranges.emplace_back(r1, r2);
+    }
+
     return {node_id, ranges};
 }
 
@@ -126,11 +138,9 @@ string Message::Found::serialize() const {
 }
 
 Message::Found Message::Found::deserialize(const string &data) {
-    istringstream ss(data);
-    int node_id;
-    long long pwd_idx;
-    char delim;
-    ss >> node_id >> delim >> pwd_idx;
+    size_t delim = data.find(',');
+    int node_id = stoi(data.substr(0, delim));
+    long long pwd_idx = stoll(data.substr(delim + 1));
     return {node_id, pwd_idx};
 }
 
@@ -139,18 +149,17 @@ Message::Found Message::Found::deserialize(const string &data) {
  * @return serialized string
  */
 string Message::serialize() const {
-    ostringstream ss;
-    ss << type;
+    string result = to_string(type);
 
     if (Assign_Data) {
-        ss << "|" << Assign_Data->serialize();
+        result.append("|").append(Assign_Data->serialize());
     } else if (Checkpoint_Data) {
-        ss << "|" << Checkpoint_Data->serialize();
+        result.append("|").append(Checkpoint_Data->serialize());
     } else if (Found_Data) {
-        ss << "|" << Found_Data->serialize();
+        result.append("|").append(Found_Data->serialize());
     }
 
-    return ss.str();
+    return result;
 }
 
 /**
@@ -163,14 +172,11 @@ Message Message::deserialize(const std::string &data) {
     MessageType type = static_cast<MessageType>(stoi(data.substr(0, delim)));
     string content = (delim != string::npos) ? data.substr(delim + 1) : "";
 
-    if (type == ASSIGN) {
-        return Message{type, Assign::deserialize(content)};
-    } else if (type == CHECKPOINT) {
-        return Message{type, Checkpoint::deserialize(content)};
-    } else if (type == FOUND) {
-        return Message{type, Found::deserialize(content)};
-    } else {
-        return Message{type};
+    switch (type) {
+        case ASSIGN: return Message{type, Assign::deserialize(content)};
+        case CHECKPOINT: return Message{type, Checkpoint::deserialize(content)};
+        case FOUND: return Message{type, Found::deserialize(content)};
+        default: return Message{type};
     }
 }
 
@@ -179,7 +185,7 @@ Message Message::deserialize(const std::string &data) {
 //int main() {
 ////    Message msg{Message::MessageType::DEFAULT};
 ////    cout << msg.serialize() << endl;
-//    Message assign(Message::ASSIGN, Message::Assign{12, {1231,2313}});
+//    Message assign(Message::ASSIGN, Message::Assign{12, 21231 , {1231,2313}, "Hash", "Salt"});
 //    string  serialized_assign = assign.serialize();
 //    cout << serialized_assign << endl;
 //    Message deserialized = Message::deserialize(serialized_assign);

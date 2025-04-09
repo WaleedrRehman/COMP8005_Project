@@ -24,7 +24,6 @@ public:
                     // upon receiving checkpoint_interval.
         CONTINUE,   // From controller to node upon receiving checkpoint_interval
                     // but password hasn't been found.
-
     };
 
     struct Assign {
