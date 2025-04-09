@@ -12,18 +12,33 @@
 
 using namespace std;
 #define MAX_CLIENTS 10
+
+// Global Data
 string  correct_password;
 atomic<bool> password_found(false);
 mutex  global_mutex;
-static atomic<long long> next_range_start(0);
+
+// Node Tracking
 unordered_map<int, pair<long long, long long>> active_nodes;
 unordered_map<int, chrono::steady_clock::time_point> node_last_seen;
 unordered_map<int, vector<pair<long long, long long>>> checkpoints;
+vector<pair<long long, long long>> remaining_work;
+
+// Password Information
 char hashed_password[256], salt[64];
-long long checkpoint;
+long long checkpoint_interval;
+static atomic<long long> next_range_start(0);
+
+// Network State
 fd_set read_fds;
 
 void reassign_remaining_work(int client_sock);
+void handle_found(int node_id, long long pwd_idx);
+void handle_checkpoint(int node_id, const Message::Checkpoint& msg);
+void assign_work(int node_id, long long work_size);
+
+vector<string> messages_text{"REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP", "CONTINUE"};
+
 
 /**
  * Generates the range given the start and the increment.
@@ -70,11 +85,6 @@ bool recv_message(int client_socket, Message &msg) {
         return false;
     }
     msg = Message::deserialize(buffer);
-    if (msg.type == Message::FOUND) {
-        password_found = true;
-        correct_password = index_to_password(msg.Found_Data->pwd_idx);
-        cout << "Password Found by client: " << client_socket << ":" << correct_password << endl;
-    }
     return true;
 }
 
@@ -137,62 +147,55 @@ void handle_message(int client_sock, long long work_size) {
     Message msg;
     if (!recv_message(client_sock, msg)) {
         lock_guard<mutex> lock(global_mutex);
-        if (active_nodes.count(client_sock)) {
-            reassign_remaining_work(client_sock);
-        }
-        close(client_sock);
-        node_last_seen.erase(client_sock);
-        checkpoints.erase(client_sock);
+        reassign_remaining_work(client_sock);
         active_nodes.erase(client_sock);
+        checkpoints.erase(client_sock);
+        node_last_seen.erase(client_sock);
         FD_CLR(client_sock, &read_fds);
+        close(client_sock);
         return;
     }
-    node_last_seen[client_sock] = chrono::steady_clock::now();
-    if (password_found) {
-        for (auto& [client_id, client_info] : active_nodes) {
-            Message stop_msg(Message::STOP);
-            send_message(client_id, stop_msg);
-            cout << "Shutting down Node: " << client_id << endl;
-        }
-        return;
+        node_last_seen[client_sock] = chrono::steady_clock::now();
+
+        switch (msg.type) {
+            case Message::REQUEST:
+                assign_work(client_sock, work_size);
+                break;
+
+            case Message::CHECKPOINT:
+                if (msg.Checkpoint_Data)
+                    handle_checkpoint(client_sock, *msg.Checkpoint_Data);
+                break;
+
+            case Message::FOUND:
+                if (msg.Found_Data)
+                    handle_found(client_sock, msg.Found_Data->pwd_idx);
+                break;
+
+            default:
+                cout << "Unknown " << msg.type << " type from " << client_sock << endl;
+
     }
-    if (msg.type == Message::REQUEST) {
-        static unordered_map<int, bool> setup_done;
-        if (!setup_done[client_sock]) {
-            Message setup(Message::SETUP, Message::Setup{client_sock, checkpoint, hashed_password, salt});
-            send_message(client_sock, setup);
-            setup_done[client_sock] = true;
-        }
-        pair<long long, long long> range;
-        {
-            lock_guard<mutex> lock(global_mutex);
-            if (!checkpoints[-1].empty()) {
-                range = checkpoints[-1].back();
-                checkpoints[-1].pop_back();
-            } else {
-                range = get_range(next_range_start, work_size);
-                next_range_start.fetch_add(work_size);
-            }
-            active_nodes[client_sock] = range;
-        }
-        cout << "REQUEST from Node: " << client_sock << endl;
-        Message assign(Message::ASSIGN, Message::Assign{client_sock, range});
-        send_message(client_sock, assign);
-        cout << "Range: " << range.first << "-" << range.second << endl;
-    } else if (msg.type == Message::FOUND) {
-        password_found = true;
-        correct_password = index_to_password(msg.Found_Data->pwd_idx);
-        cout << "Password found: " << correct_password << " by Node: "
-             << msg.Found_Data->node_id << endl;
-    } else if (msg.type == Message::CHECKPOINT) {
-        lock_guard<mutex> lock(global_mutex);
-        checkpoints[client_sock] = msg.Checkpoint_Data->ranges;
-        cout << "Node: " << client_sock << " Checkpoints: " << endl;
-        for(auto &range: msg.Checkpoint_Data->ranges)
-            cout << range.first << "-" << range.second << endl;
-        send_message(client_sock, Message(Message::CONTINUE));
+
+
+}
+
+void handle_checkpoint(int node_id, const Message::Checkpoint& msg) {
+    lock_guard<mutex> lock(global_mutex);
+
+    checkpoints[node_id] = msg.ranges;
+    node_last_seen[node_id] = chrono::steady_clock::now();
+    cout << "Checkpoint from Node: " << node_id << endl;
+    for (auto& range : msg.ranges) {
+        cout << "[" << range.first << "-" << range.second << "]" << endl;
+    }
+    if (password_found.load()) {
+        send_message(node_id, Message(Message::STOP));
+    } else {
+        send_message(node_id, Message(Message::CONTINUE));
     }
 }
+
 
 void start_server(int port, long long work_size, int timeout_seconds) {
     int serv_sock = socket(AF_INET6, SOCK_STREAM, 0);
@@ -269,47 +272,78 @@ void start_server(int port, long long work_size, int timeout_seconds) {
 void reassign_remaining_work(int client_sock) {
     if (!active_nodes.count(client_sock)) return;
 
-    auto lost_range = active_nodes[client_sock];
-    long long start = lost_range.first;
-    long long end = lost_range.second;
+    auto og_range = active_nodes[client_sock];
+    auto node_checkpoints = checkpoints[client_sock];
 
-    vector<pair<long long, long long>> completed_ranges;
-    if (checkpoints.count(client_sock)) {
-        completed_ranges = checkpoints[client_sock];
-    }
-    sort(completed_ranges.begin(), completed_ranges.end());
+    long long cur = og_range.first;
 
-    vector<pair<long long, long long>> remaining;
-
-    long long current_start = start;
-    for (const auto& [chp_start, chp_end] : completed_ranges) {
-        if (chp_start > current_start) {
-            remaining.emplace_back(current_start, chp_start - 1);
+    sort(node_checkpoints.begin(), node_checkpoints.end());
+    for (const auto& [chp_start, chp_end] : node_checkpoints) {
+        if (chp_start > cur) {
+            remaining_work.emplace_back(cur, chp_start - 1);
         }
-        current_start = max(current_start, chp_end + 1);
+        cur = max(cur, chp_end + 1);
     }
-    if (current_start <= end)
-        remaining.emplace_back(current_start, end);
+    if (cur <= og_range.second) {
+        remaining_work.emplace_back(cur, og_range.second);
+    }
 
-    for(const auto &r : remaining){
-        checkpoints[-1].push_back(r);
-        cout << "Reassigning range: " << r.first << "-" << r.second
-             << " from node " << client_sock << endl;
+    lock_guard<mutex> lock(global_mutex);
+    for (auto &range : remaining_work) {
+        next_range_start = min(next_range_start.load(), range.first);
+        cout << "Reassigning range: " << range.first << "-" << range.second << endl;
     }
-    active_nodes.erase(client_sock);
-    checkpoints.erase(client_sock);
+}
+
+void handle_found(int node_id, long long pwd_idx) {
+    lock_guard<mutex> lock(global_mutex);
+
+    if (!password_found.exchange(true)) {
+        correct_password = index_to_password(pwd_idx);
+        cout << "PASSWORD FOUND BY NODE " << node_id << ": " << correct_password << endl;
+
+        // Send STOP to all other nodes
+        for (auto& [id, _] : active_nodes) {
+            if (id != node_id) {
+                send_message(id, Message(Message::STOP));
+            }
+        }
+    }
+}
+
+void assign_work(int node_id, long long work_size) {
+    lock_guard<mutex> lock(global_mutex);
+
+    // Assign new range
+    long long start = next_range_start.fetch_add(work_size);
+    pair<long long, long long> range = {start, start + work_size - 1};
+
+    active_nodes[node_id] = range;
+    node_last_seen[node_id] = chrono::steady_clock::now();
+
+    Message assign(Message::ASSIGN, Message::Assign{node_id, checkpoint_interval ,range, hashed_password, salt});
+    send_message(node_id, assign);
+
+    cout << "Assigned " << node_id << ": " << range.first << "-" << range.second << endl;
+}
+
+void stop_all() {
+    lock_guard<mutex> lock(global_mutex);
+    for(auto& [node_id, _] : active_nodes) {
+        send_message(node_id, Message(Message::STOP));
+    }
 }
 
 int main(int argc, char *argv[]) {
     if (argc != 6) {
-        cerr << "Usage: " << argv[0] << " <port> <hash> <work-size> <checkpoint> <timeout>\n";
+        cerr << "Usage: " << argv[0] << " <port> <hash> <work-size> <checkpoint_interval> <timeout>\n";
         return 1;
     }
 
     int port = stoi(argv[1]);
     char *hash = argv[2];
     long long work_size = stoll(argv[3]);
-    checkpoint = stoi(argv[4]);
+    checkpoint_interval = stoi(argv[4]);
     int timeout = stoi(argv[5]);
     extract_salt(hash, salt, sizeof (salt));
     strcpy(hashed_password, hash);

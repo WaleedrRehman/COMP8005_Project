@@ -28,8 +28,8 @@ Message::Message(Message::MessageType type, const Message::Assign &Assign_Data) 
 
 /**
  * Message constructor for a Checkpoint message
- * @param type Message type ie a checkpoint
- * @param Checkpoint_Data Data for the Checkpoint ie range for the checkpoint.
+ * @param type Message type ie a checkpoint_interval
+ * @param Checkpoint_Data Data for the Checkpoint ie range for the checkpoint_interval.
  */
 Message::Message(Message::MessageType type, const Message::Checkpoint &Checkpoint_Data) {
     this->type = type;
@@ -41,11 +41,6 @@ Message::Message(Message::MessageType type, const Message::Found &Found_Data) {
     this->Found_Data = Found_Data;
 }
 
-Message::Message(Message::MessageType type, const Message::Setup &Setup_Data) {
-    this->type = type;
-    this->Setup_Data = Setup_Data;
-}
-
 
 // ASSIGN SERIALIZATION and DESERIALIZATION
 
@@ -54,8 +49,8 @@ Message::Message(Message::MessageType type, const Message::Setup &Setup_Data) {
  * @return String representation of the Assign struct.
  */
 string Message::Assign::serialize() const {
-    return to_string(node_id) + "," + to_string(range.first) + "-"
-    + to_string(range.second);
+    return to_string(node_id) + "," + to_string(checkpoint) + "," +
+    to_string(range.first) + "-" + to_string(range.second) + "," + hashed_password + "," + salt;
 }
 
 /**
@@ -66,12 +61,21 @@ string Message::Assign::serialize() const {
 Message::Assign Message::Assign::deserialize(const std::string &data) {
     istringstream ss(data);
     int node_id;
-    long long start, end;
+    long long checkpoint;
     char delim;
-    ss >> node_id >> delim >> start >> delim >> end >> delim;
 
+    string  range_str, hashed_password, salt;
 
-    return {node_id, {start, end}};
+    ss >> node_id >> delim >> checkpoint >> delim;
+    getline(ss, range_str, ',');
+    getline(ss, hashed_password, ',');
+    getline(ss, salt);
+
+    size_t dash = range_str.find('-');
+    long long start = stoll(range_str.substr(0, dash));
+    long long end = stoll(range_str.substr(dash + 1));
+
+    return {node_id, checkpoint, {start, end}, hashed_password, salt};
 }
 
 // CHECKPOINT SERIALIZATION AND DESERIALIZATION
@@ -95,12 +99,12 @@ string  Message::Checkpoint::serialize() const {
  * @return
  */
 Message::Checkpoint Message::Checkpoint::deserialize(const std::string &data) {
-    istringstream ss(data);
-    int node_id;
-    char delim;
+    size_t colon_pos = data.find(':');
+    int node_id = stoi(data.substr(0, colon_pos));
     vector<pair<long long, long long>> ranges;
 
-    ss >> node_id >> delim;
+    string ranges_part = data.substr(colon_pos + 1);
+    istringstream ss(ranges_part);
     string range_str;
 
     while (getline(ss, range_str, ':')) {
@@ -130,25 +134,6 @@ Message::Found Message::Found::deserialize(const string &data) {
     return {node_id, pwd_idx};
 }
 
-// SETUP SERIALIZATION AND DESERIALIZATION
-
-string Message::Setup::serialize() const {
-    return to_string(node_id) + "," + to_string(checkpoint) + "," + hashed_password + "," + salt;
-}
-
-Message::Setup Message::Setup::deserialize(const std::string &data) {
-    istringstream ss(data);
-    int node_id;
-    long long checkpoint;
-    char delim;
-    string hashed_password, salt;
-    ss >> node_id >> delim >> checkpoint >> delim;
-    getline(ss, hashed_password, ',');
-    getline(ss, salt);
-
-    return {node_id, checkpoint, hashed_password, salt};
-}
-
 /**
  * Serialization -> Calls the appropriate serialization based on the type.
  * @return serialized string
@@ -163,8 +148,6 @@ string Message::serialize() const {
         ss << "|" << Checkpoint_Data->serialize();
     } else if (Found_Data) {
         ss << "|" << Found_Data->serialize();
-    } else if (Setup_Data) {
-        ss << "|" << Setup_Data->serialize();
     }
 
     return ss.str();
@@ -186,8 +169,6 @@ Message Message::deserialize(const std::string &data) {
         return Message{type, Checkpoint::deserialize(content)};
     } else if (type == FOUND) {
         return Message{type, Found::deserialize(content)};
-    } else if (type == SETUP) {
-        return Message{type, Setup::deserialize(content)};
     } else {
         return Message{type};
     }
