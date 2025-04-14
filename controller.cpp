@@ -118,7 +118,7 @@ const char *get_hash_type(const char *pwd_hash) {
 }
 
 /**
- * Extracts the salt of the hashed password to the salt_buffer.
+ * Extracts the salt of the hashed password.
  * @param hashed_pwd
  * @param salt_buffer
  * @param buffer_size
@@ -145,6 +145,11 @@ void extract_salt(char *hashed_pwd, char *salt_buffer, size_t buffer_size) {
     salt_buffer[salt_len] = '\0';
 }
 
+/**
+ *
+ * @param client_sock
+ * @param work_size
+ */
 void handle_message(int client_sock, long long work_size) {
     Message msg;
 
@@ -160,6 +165,8 @@ void handle_message(int client_sock, long long work_size) {
         close(client_sock);
         return;
     }
+
+    cout << "Handling message from node: " << client_sock << ": " + messages_text[msg.type] << endl;
 
     switch (msg.type) {
         case Message::REQUEST:
@@ -178,10 +185,7 @@ void handle_message(int client_sock, long long work_size) {
 
         default:
             cout << "Unknown " << msg.type << " type from " << client_sock << endl;
-
     }
-
-
 }
 
 void handle_checkpoint(int node_id, const Message::Checkpoint &msg) {
@@ -249,9 +253,11 @@ void start_server(int port, long long work_size, int timeout_seconds) {
         for (auto it = node_last_seen.begin(); it != node_last_seen.end();) {
             int node_id = it->first;
             auto last_seen = it->second;
+            cout << "Node: " << node_id << " last seen at: "
+                 << chrono::duration_cast<chrono::seconds>(last_seen.time_since_epoch()).count() << endl;
             if (chrono::duration_cast<chrono::seconds>(now - last_seen).count() > timeout_seconds) {
                 cerr << "Node: " << node_id << " timed out\n";
-                reassign_remaining_work(node_id);
+//                reassign_remaining_work(node_id);
                 close(node_id);
                 FD_CLR(node_id, &read_fds);  // Remove from FD_SET
                 checkpoints.erase(node_id);

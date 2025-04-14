@@ -158,7 +158,6 @@ string Message::serialize() const {
     } else if (Found_Data) {
         result.append("|").append(Found_Data->serialize());
     }
-
     return result;
 }
 
@@ -181,7 +180,7 @@ Message Message::deserialize(const std::string &data) {
 }
 
 
-
+//
 //int main() {
 ////    Message msg{Message::MessageType::DEFAULT};
 ////    cout << msg.serialize() << endl;

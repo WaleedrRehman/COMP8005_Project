@@ -62,12 +62,12 @@ string index_to_password(long long index) {
 bool recv_message(int client_socket, Message &msg) {
     uint32_t size;
 
-    if (recv(client_socket, &size, sizeof(size), MSG_WAITALL) <= 0) {
+    if (recv(client_socket, &size, sizeof(size), 0) <= 0) {
         cerr << "Failed to receive message size or client disconnected." << endl;
         return false;
     }
     string buffer(size, '\0');
-    if (recv(client_socket, buffer.data(), size, MSG_WAITALL) <= 0) {
+    if (recv(client_socket, buffer.data(), size, 0) <= 0) {
         cerr << "Failed to receive full message" << endl;
         return false;
     }
@@ -164,6 +164,7 @@ bool request_work(int num_threads, string& hashed_password, string& salt) {
         salt = resp.Assign_Data->salt;
 
         cout << "Range received: " << start_range << "-" << end_range << endl;
+//        cout << "Password idx: " << hashed_password << "," << "Salt: " << salt << endl;
         return divide_work(num_threads, hashed_password, salt, start_range, end_range);
     } else if (received && resp.type == Message::STOP) {
         cout << "[!] Received STOP from server. Exiting..." << endl;
@@ -184,7 +185,7 @@ void crack_password(int thread_id, long long start, long long end, const string 
     thread_local struct crypt_data crypt_buffer{};
     crypt_buffer.initialized = 0;
 
-    char pwd_guess[32];
+    char pwd_guess[256];
     size_t max_len = 0;
 
     for (long long i = start; i <= end && !password_found; ++i) {
@@ -203,6 +204,7 @@ void crack_password(int thread_id, long long start, long long end, const string 
             cerr << "Error: crypt_r() failed for password: " << pwd_guess << endl;
             continue;
         }
+//        cout << "Guess" << pwd_guess << endl;
 
         if (strcmp(gen_hash, hashed_password.c_str()) == 0) {
             password_found = true;
@@ -217,9 +219,11 @@ void crack_password(int thread_id, long long start, long long end, const string 
         total_guesses++;
         long long current_guesses = guesses_since_last_checkpoint.fetch_add(1) + 1;
 
-
-        thread_ranges[thread_id].first = thread_ranges[thread_id].second;
-        thread_ranges[thread_id].second = i;  // Update end of range
+        {
+            lock_guard<mutex> lock(ranges_mtx);
+            thread_ranges[thread_id].first = thread_ranges[thread_id].second;
+            thread_ranges[thread_id].second = i;  // Update end of range
+        }
 
 
         // Check if we need to checkpoint_interval
@@ -350,7 +354,6 @@ int main(int argc, char *argv[]) {
     start_conn(server_ip, server_port);
     while (true) {
         bool work_done = request_work(num_threads, hashed_password, salt);
-
         if (password_found) {
             cout << "Password Found. Stopping worker node.\n";
             break;
