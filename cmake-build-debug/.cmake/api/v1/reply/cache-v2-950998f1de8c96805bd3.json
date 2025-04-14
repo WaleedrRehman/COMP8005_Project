@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug"
+			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -104,6 +104,22 @@
 			],
 			"type" : "BOOL",
 			"value" : "ON"
+		},
+		{
+			"name" : "CMAKE_COLOR_MAKEFILE",
+			"properties" : 
+			[
+				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
+					"name" : "HELPSTRING",
+					"value" : ""
+				}
+			],
+			"type" : "UNINITIALIZED",
+			"value" : ""
 		},
 		{
 			"name" : "CMAKE_COMMAND",
@@ -543,7 +559,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug/CMakeFiles/pkgRedirects"
+			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug/CMakeFiles/pkgRedirects"
 		},
 		{
 			"name" : "CMAKE_GENERATOR",
@@ -555,7 +571,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "Ninja"
+			"value" : "Unix Makefiles"
 		},
 		{
 			"name" : "CMAKE_GENERATOR_INSTANCE",
@@ -603,7 +619,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3"
+			"value" : "/home/waleed/CLionProjects/COMP8005_Project"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -650,12 +666,16 @@
 			"properties" : 
 			[
 				{
+					"name" : "ADVANCED",
+					"value" : "1"
+				},
+				{
 					"name" : "HELPSTRING",
-					"value" : "No help, variable specified on the command line."
+					"value" : "Path to a program."
 				}
 			],
-			"type" : "UNINITIALIZED",
-			"value" : "/home/waleed/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja"
+			"type" : "FILEPATH",
+			"value" : "/usr/bin/make"
 		},
 		{
 			"name" : "CMAKE_MODULE_LINKER_FLAGS",
@@ -843,7 +863,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "COMP8005_Assign_3"
+			"value" : "COMP8005_Project"
 		},
 		{
 			"name" : "CMAKE_RANLIB",
@@ -1151,7 +1171,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug"
+			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug"
 		},
 		{
 			"name" : "COMP8005_Assign_3_IS_TOP_LEVEL",
@@ -1175,235 +1195,43 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3"
+			"value" : "/home/waleed/CLionProjects/COMP8005_Project"
 		},
 		{
-			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenMP",
+			"name" : "COMP8005_Project_BINARY_DIR",
 			"properties" : 
 			[
 				{
 					"name" : "HELPSTRING",
-					"value" : "Details about finding OpenMP"
+					"value" : "Value Computed by CMake"
 				}
 			],
-			"type" : "INTERNAL",
-			"value" : "[TRUE][TRUE][c ][v4.5()]"
+			"type" : "STATIC",
+			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug"
 		},
 		{
-			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenMP_C",
+			"name" : "COMP8005_Project_IS_TOP_LEVEL",
 			"properties" : 
 			[
 				{
 					"name" : "HELPSTRING",
-					"value" : "Details about finding OpenMP_C"
+					"value" : "Value Computed by CMake"
 				}
 			],
-			"type" : "INTERNAL",
-			"value" : "[-fopenmp][/usr/lib/libgomp.so][/usr/lib/libpthread.a][v4.5()]"
+			"type" : "STATIC",
+			"value" : "ON"
 		},
 		{
-			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenMP_CXX",
+			"name" : "COMP8005_Project_SOURCE_DIR",
 			"properties" : 
 			[
 				{
 					"name" : "HELPSTRING",
-					"value" : "Details about finding OpenMP_CXX"
+					"value" : "Value Computed by CMake"
 				}
 			],
-			"type" : "INTERNAL",
-			"value" : "[-fopenmp][/usr/lib/libgomp.so][/usr/lib/libpthread.a][v4.5()]"
-		},
-		{
-			"name" : "OpenMP_COMPILE_RESULT_CXX_fopenmp",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Result of TRY_COMPILE"
-				}
-			],
-			"type" : "INTERNAL",
-			"value" : "TRUE"
-		},
-		{
-			"name" : "OpenMP_COMPILE_RESULT_C_fopenmp",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Result of TRY_COMPILE"
-				}
-			],
-			"type" : "INTERNAL",
-			"value" : "TRUE"
-		},
-		{
-			"name" : "OpenMP_CXX_FLAGS",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "CXX compiler flags for OpenMP parallelization"
-				}
-			],
-			"type" : "STRING",
-			"value" : "-fopenmp"
-		},
-		{
-			"name" : "OpenMP_CXX_LIB_NAMES",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "CXX compiler libraries for OpenMP parallelization"
-				}
-			],
-			"type" : "STRING",
-			"value" : "gomp;pthread"
-		},
-		{
-			"name" : "OpenMP_CXX_SPEC_DATE",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "CXX compiler's OpenMP specification date"
-				}
-			],
-			"type" : "INTERNAL",
-			"value" : "201511"
-		},
-		{
-			"name" : "OpenMP_C_FLAGS",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "C compiler flags for OpenMP parallelization"
-				}
-			],
-			"type" : "STRING",
-			"value" : "-fopenmp"
-		},
-		{
-			"name" : "OpenMP_C_LIB_NAMES",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "C compiler libraries for OpenMP parallelization"
-				}
-			],
-			"type" : "STRING",
-			"value" : "gomp;pthread"
-		},
-		{
-			"name" : "OpenMP_C_SPEC_DATE",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "C compiler's OpenMP specification date"
-				}
-			],
-			"type" : "INTERNAL",
-			"value" : "201511"
-		},
-		{
-			"name" : "OpenMP_SPECTEST_CXX_",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Result of TRY_COMPILE"
-				}
-			],
-			"type" : "INTERNAL",
-			"value" : "TRUE"
-		},
-		{
-			"name" : "OpenMP_SPECTEST_C_",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Result of TRY_COMPILE"
-				}
-			],
-			"type" : "INTERNAL",
-			"value" : "TRUE"
-		},
-		{
-			"name" : "OpenMP_gomp_LIBRARY",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "Path to the gomp library for OpenMP"
-				}
-			],
-			"type" : "FILEPATH",
-			"value" : "/usr/lib/libgomp.so"
-		},
-		{
-			"name" : "OpenMP_pthread_LIBRARY",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "Path to the pthread library for OpenMP"
-				}
-			],
-			"type" : "FILEPATH",
-			"value" : "/usr/lib/libpthread.a"
-		},
-		{
-			"name" : "Python3_EXECUTABLE",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "No help, variable specified on the command line."
-				}
-			],
-			"type" : "UNINITIALIZED",
-			"value" : "/usr/bin/python3.13"
-		},
-		{
-			"name" : "Python_EXECUTABLE",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "No help, variable specified on the command line."
-				}
-			],
-			"type" : "UNINITIALIZED",
-			"value" : "/usr/bin/python3.13"
+			"type" : "STATIC",
+			"value" : "/home/waleed/CLionProjects/COMP8005_Project"
 		},
 		{
 			"name" : "_CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED",

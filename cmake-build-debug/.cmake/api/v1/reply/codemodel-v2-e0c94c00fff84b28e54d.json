@@ -27,7 +27,7 @@
 					[
 						0
 					],
-					"name" : "COMP8005_Assign_3",
+					"name" : "COMP8005_Project",
 					"targetIndexes" : 
 					[
 						0
@@ -38,9 +38,9 @@
 			[
 				{
 					"directoryIndex" : 0,
-					"id" : "COMP8005_Assign_3::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-COMP8005_Assign_3-Debug-0e77378288d673ea3855.json",
-					"name" : "COMP8005_Assign_3",
+					"id" : "COMP8005_Project::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-COMP8005_Project-Debug-ab28bf3d7559d0ab2091.json",
+					"name" : "COMP8005_Project",
 					"projectIndex" : 0
 				}
 			]
@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug",
-		"source" : "/home/waleed/COMP8005/COMP8005_Assign_3"
+		"build" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug",
+		"source" : "/home/waleed/CLionProjects/COMP8005_Project"
 	},
 	"version" : 
 	{
