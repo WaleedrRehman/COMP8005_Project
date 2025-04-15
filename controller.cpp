@@ -57,31 +57,48 @@ string index_to_password(long long index) {
     }
     return password;
 }
-
 bool recv_message(int client_socket, Message &msg) {
     uint32_t size_net;
     ssize_t n = recv(client_socket, &size_net, sizeof(size_net), MSG_WAITALL);
-    if (n <= 0) {
-        cerr << "[recv_message] Failed to read message size or client disconnected." << endl;
+
+    if (n == 0) {
+        cout << "\nNode: " << client_socket << " disconnected gracefully.\n" << endl;
+        return false;
+    } else if (n < 0) {
+        cerr << "[recv_message] Error receiving message size: " << strerror(errno) << endl;
+        return false;
+    } else if (n != sizeof(size_net)) {
+        cerr << "[recv_message] Incomplete size read: " << n << " bytes." << endl;
         return false;
     }
+
     uint32_t size = ntohl(size_net);
     if (size == 0 || size > 10 * 1024 * 1024) {
         cerr << "[recv_message] Invalid message size: " << size << endl;
         return false;
     }
+
     string buffer(size, '\0');
     n = recv(client_socket, buffer.data(), size, MSG_WAITALL);
-    if (n <= 0) {
-        cerr << "[recv_message] Failed to receive message payload." << endl;
+
+    if (n == 0) {
+        cerr << "[recv_message] Node: " << client_socket << "disconnected during payload receive." << endl;
+        return false;
+    } else if (n < 0) {
+        cerr << "[recv_message] Error receiving message payload: " << strerror(errno) << endl;
+        return false;
+    } else if (n != size) {
+        cerr << "[recv_message] Incomplete message payload received: " << n << " of " << size << " bytes." << endl;
         return false;
     }
+
     try {
         msg = Message::deserialize(buffer);
     } catch (const std::exception &e) {
         cerr << "[recv_message] Deserialization error: " << e.what() << endl;
         return false;
     }
+
     return true;
 }
 
@@ -230,8 +247,10 @@ void start_server(int port, long long work_size, int timeout_seconds) {
     }
     auto end_time = chrono::steady_clock::now();
     auto duration = chrono::duration_cast<chrono::seconds>(end_time - server_start_time).count();
-    cout << "Time taken to crack password: " << duration << " seconds." << endl;
-    cout << "Password Found." << endl;
+    if (password_found.load()) {
+        cout << "Time taken to crack password: " << duration << " seconds." << endl;
+        cout << "Password Found." << endl;
+    }
     // Send STOP message to all clients
     for (int fd = 0; fd <= max_fd; ++fd) {
         if (FD_ISSET(fd, &read_fds) && fd != serv_sock) {

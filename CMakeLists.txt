@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_executable(COMP8005_Project
         Message.cpp
         Message.h
-#        controller.cpp
-        node.cpp
+        controller.cpp
+#        node.cpp
 )
 
 # Link libcrypt

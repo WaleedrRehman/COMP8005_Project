@@ -11,7 +11,7 @@
 # =============================================================================
 
 # =============================================================================
-# Project: COMP8005_Assign_3
+# Project: COMP8005_Project
 # Configurations: Debug
 # =============================================================================
 
@@ -41,42 +41,42 @@ include CMakeFiles/rules.ninja
 
 cmake_ninja_workdir = /home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug/
 # =============================================================================
-# Object build statements for EXECUTABLE target COMP8005_Assign_3
+# Object build statements for EXECUTABLE target COMP8005_Project
 
 
 #############################################
-# Order-only phony target for COMP8005_Assign_3
+# Order-only phony target for COMP8005_Project
 
-build cmake_object_order_depends_target_COMP8005_Assign_3: phony || .
+build cmake_object_order_depends_target_COMP8005_Project: phony || .
 
-build CMakeFiles/COMP8005_Assign_3.dir/Message.cpp.o: CXX_COMPILER__COMP8005_Assign_3_unscanned_Debug /home/waleed/COMP8005/COMP8005_Assign_3/Message.cpp || cmake_object_order_depends_target_COMP8005_Assign_3
-  DEP_FILE = CMakeFiles/COMP8005_Assign_3.dir/Message.cpp.o.d
+build CMakeFiles/COMP8005_Project.dir/Message.cpp.o: CXX_COMPILER__COMP8005_Project_unscanned_Debug /home/waleed/COMP8005/COMP8005_Assign_3/Message.cpp || cmake_object_order_depends_target_COMP8005_Project
+  DEP_FILE = CMakeFiles/COMP8005_Project.dir/Message.cpp.o.d
   FLAGS = -g -std=gnu++17 -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles/COMP8005_Assign_3.dir
-  OBJECT_FILE_DIR = CMakeFiles/COMP8005_Assign_3.dir
+  OBJECT_DIR = CMakeFiles/COMP8005_Project.dir
+  OBJECT_FILE_DIR = CMakeFiles/COMP8005_Project.dir
 
-build CMakeFiles/COMP8005_Assign_3.dir/controller.cpp.o: CXX_COMPILER__COMP8005_Assign_3_unscanned_Debug /home/waleed/COMP8005/COMP8005_Assign_3/controller.cpp || cmake_object_order_depends_target_COMP8005_Assign_3
-  DEP_FILE = CMakeFiles/COMP8005_Assign_3.dir/controller.cpp.o.d
+build CMakeFiles/COMP8005_Project.dir/controller.cpp.o: CXX_COMPILER__COMP8005_Project_unscanned_Debug /home/waleed/COMP8005/COMP8005_Assign_3/controller.cpp || cmake_object_order_depends_target_COMP8005_Project
+  DEP_FILE = CMakeFiles/COMP8005_Project.dir/controller.cpp.o.d
   FLAGS = -g -std=gnu++17 -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles/COMP8005_Assign_3.dir
-  OBJECT_FILE_DIR = CMakeFiles/COMP8005_Assign_3.dir
+  OBJECT_DIR = CMakeFiles/COMP8005_Project.dir
+  OBJECT_FILE_DIR = CMakeFiles/COMP8005_Project.dir
 
 
 # =============================================================================
-# Link build statements for EXECUTABLE target COMP8005_Assign_3
+# Link build statements for EXECUTABLE target COMP8005_Project
 
 
 #############################################
-# Link the executable COMP8005_Assign_3
+# Link the executable COMP8005_Project
 
-build COMP8005_Assign_3: CXX_EXECUTABLE_LINKER__COMP8005_Assign_3_Debug CMakeFiles/COMP8005_Assign_3.dir/Message.cpp.o CMakeFiles/COMP8005_Assign_3.dir/controller.cpp.o
+build COMP8005_Project: CXX_EXECUTABLE_LINKER__COMP8005_Project_Debug CMakeFiles/COMP8005_Project.dir/Message.cpp.o CMakeFiles/COMP8005_Project.dir/controller.cpp.o
   FLAGS = -g
   LINK_LIBRARIES = -lcrypt
-  OBJECT_DIR = CMakeFiles/COMP8005_Assign_3.dir
+  OBJECT_DIR = CMakeFiles/COMP8005_Project.dir
   POST_BUILD = :
   PRE_LINK = :
-  TARGET_FILE = COMP8005_Assign_3
-  TARGET_PDB = COMP8005_Assign_3.dbg
+  TARGET_FILE = COMP8005_Project
+  TARGET_PDB = COMP8005_Project.dbg
 
 
 #############################################
@@ -112,7 +112,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 #############################################
 # Folder: /home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug
 
-build all: phony COMP8005_Assign_3
+build all: phony COMP8005_Project
 
 # =============================================================================
 # Built-in targets

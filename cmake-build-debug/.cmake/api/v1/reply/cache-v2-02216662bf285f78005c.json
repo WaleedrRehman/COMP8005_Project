@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug"
+			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -104,22 +104,6 @@
 			],
 			"type" : "BOOL",
 			"value" : "ON"
-		},
-		{
-			"name" : "CMAKE_COLOR_MAKEFILE",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : ""
-				}
-			],
-			"type" : "UNINITIALIZED",
-			"value" : ""
 		},
 		{
 			"name" : "CMAKE_COMMAND",
@@ -559,7 +543,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug/CMakeFiles/pkgRedirects"
+			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug/CMakeFiles/pkgRedirects"
 		},
 		{
 			"name" : "CMAKE_GENERATOR",
@@ -571,7 +555,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "Unix Makefiles"
+			"value" : "Ninja"
 		},
 		{
 			"name" : "CMAKE_GENERATOR_INSTANCE",
@@ -619,7 +603,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/waleed/CLionProjects/COMP8005_Project"
+			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -666,16 +650,12 @@
 			"properties" : 
 			[
 				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
 					"name" : "HELPSTRING",
-					"value" : "Path to a program."
+					"value" : "No help, variable specified on the command line."
 				}
 			],
-			"type" : "FILEPATH",
-			"value" : "/usr/bin/make"
+			"type" : "UNINITIALIZED",
+			"value" : "/home/waleed/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja"
 		},
 		{
 			"name" : "CMAKE_MODULE_LINKER_FLAGS",
@@ -1162,42 +1142,6 @@
 			"value" : "FALSE"
 		},
 		{
-			"name" : "COMP8005_Assign_3_BINARY_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug"
-		},
-		{
-			"name" : "COMP8005_Assign_3_IS_TOP_LEVEL",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "ON"
-		},
-		{
-			"name" : "COMP8005_Assign_3_SOURCE_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "/home/waleed/CLionProjects/COMP8005_Project"
-		},
-		{
 			"name" : "COMP8005_Project_BINARY_DIR",
 			"properties" : 
 			[
@@ -1207,7 +1151,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/waleed/CLionProjects/COMP8005_Project/cmake-build-debug"
+			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3/cmake-build-debug"
 		},
 		{
 			"name" : "COMP8005_Project_IS_TOP_LEVEL",
@@ -1231,7 +1175,31 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/waleed/CLionProjects/COMP8005_Project"
+			"value" : "/home/waleed/COMP8005/COMP8005_Assign_3"
+		},
+		{
+			"name" : "Python3_EXECUTABLE",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "No help, variable specified on the command line."
+				}
+			],
+			"type" : "UNINITIALIZED",
+			"value" : "/usr/bin/python3.13"
+		},
+		{
+			"name" : "Python_EXECUTABLE",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "No help, variable specified on the command line."
+				}
+			],
+			"type" : "UNINITIALIZED",
+			"value" : "/usr/bin/python3.13"
 		},
 		{
 			"name" : "_CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED",
