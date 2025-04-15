@@ -17,6 +17,7 @@ using namespace std;
 string correct_password;
 atomic<bool> password_found(false);
 mutex global_mutex;
+atomic<bool> shutdown_requested(false);
 
 // Node Tracking
 unordered_map<int, pair<long long, long long>> active_nodes;
@@ -39,6 +40,11 @@ void assign_work(int node_id, long long work_size);
 vector<string> messages_text{"REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP", "CONTINUE"};
 constexpr int ASCII_RANGE = 256;
 
+void signal_handler(int signum) {
+    cout << "\nSignal (" << signum << ") received. Shutting down..." << endl;
+    shutdown_requested.store(true);
+}
+
 pair<long long, long long> get_range(long long start_idx, long long size) {
     return {start_idx, start_idx + size - 1};
 }
@@ -53,25 +59,52 @@ string index_to_password(long long index) {
 }
 
 bool recv_message(int client_socket, Message &msg) {
-    uint32_t size;
-    if (recv(client_socket, &size, sizeof(size), MSG_WAITALL) <= 0) {
-        cerr << "Failed to receive message size or client disconnected." << endl;
+    uint32_t size_net;
+    ssize_t n = recv(client_socket, &size_net, sizeof(size_net), MSG_WAITALL);
+    if (n <= 0) {
+        cerr << "[recv_message] Failed to read message size or client disconnected." << endl;
+        return false;
+    }
+    uint32_t size = ntohl(size_net);
+    if (size == 0 || size > 10 * 1024 * 1024) {
+        cerr << "[recv_message] Invalid message size: " << size << endl;
         return false;
     }
     string buffer(size, '\0');
-    if (recv(client_socket, buffer.data(), size, MSG_WAITALL) <= 0) {
-        cerr << "Failed to receive full message" << endl;
+    n = recv(client_socket, buffer.data(), size, MSG_WAITALL);
+    if (n <= 0) {
+        cerr << "[recv_message] Failed to receive message payload." << endl;
         return false;
     }
-    msg = Message::deserialize(buffer);
+    try {
+        msg = Message::deserialize(buffer);
+    } catch (const std::exception &e) {
+        cerr << "[recv_message] Deserialization error: " << e.what() << endl;
+        return false;
+    }
     return true;
 }
 
-void send_message(int client_socket, const Message &msg) {
+
+bool send_message(int client_socket, const Message &msg) {
     string serialized = msg.serialize();
     uint32_t size = serialized.size();
-    send(client_socket, &size, sizeof(size), 0);
-    send(client_socket, serialized.c_str(), serialized.size(), 0);
+    uint32_t size_net = htonl(size);
+    if (send(client_socket, &size_net, sizeof(size_net), 0) != sizeof(size_net)) {
+        cerr << "[send_message] Failed to send message size." << endl;
+        return false;
+    }
+    ssize_t total_sent = 0;
+    const char *data = serialized.c_str();
+    while (total_sent < size) {
+        ssize_t sent = send(client_socket, data + total_sent, size - total_sent, 0);
+        if (sent <= 0) {
+            cerr << "[send_message] Failed to send full message payload." << endl;
+            return false;
+        }
+        total_sent += sent;
+    }
+    return true;
 }
 
 const char *get_hash_type(const char *pwd_hash) {
@@ -156,12 +189,11 @@ void start_server(int port, long long work_size, int timeout_seconds) {
     FD_SET(serv_sock, &read_fds);
     int max_fd = serv_sock;
     cout << "Server started on port: " << port << endl;
-    while (!password_found) {
+    while (!password_found && !shutdown_requested.load()) {
         fd_set temp_fds = read_fds;
         timeval tv{.tv_sec = timeout_seconds, .tv_usec = 0};
         int activity = select(max_fd + 1, &temp_fds, nullptr, nullptr, &tv);
         if (activity < 0) continue;
-
         for (int fd = 0; fd <= max_fd; ++fd) {
             if (!FD_ISSET(fd, &temp_fds)) continue;
             if (fd == serv_sock) {
@@ -239,7 +271,6 @@ void assign_work(int node_id, long long work_size) {
     // Assign new range
     active_nodes[node_id] = range;
     node_last_seen[node_id] = std::chrono::steady_clock::now();
-
     Message assign(Message::ASSIGN, Message::Assign{node_id, checkpoint_interval, range, hashed_password, salt});
     send_message(node_id, assign);
 }
@@ -250,14 +281,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     int port = stoi(argv[1]);
     char *hash = argv[2];
     long long work_size = stoll(argv[3]);
     checkpoint_interval = stoi(argv[4]);
     int timeout = stoi(argv[5]);
+
     extract_salt(hash, salt, sizeof(salt));
     strcpy(hashed_password, hash);
     server_start_time = chrono::steady_clock::now();
+
     start_server(port, work_size, timeout);
     return 0;
 }

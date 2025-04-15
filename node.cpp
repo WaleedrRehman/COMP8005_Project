@@ -31,44 +31,53 @@ constexpr int BASE_ASCII = 32;
 
 bool divide_work(int num_threads, const string& hashed_password, const string& salt, long long total_start, long long total_end);
 
-/**
- * Receives the message from the given socket.
- * @param client_socket
- * @param msg
- * @return bool Whether any message was received.
- */
 bool recv_message(int client_socket, Message &msg) {
-    uint32_t size;
-    if (recv(client_socket, &size, sizeof(size), 0) <= 0) {
-        cerr << "Failed to receive message size or client disconnected." << endl;
+    uint32_t net_size;
+    ssize_t recvd = recv(client_socket, &net_size, sizeof(net_size), MSG_WAITALL);
+    if (recvd <= 0) {
+        cerr << "Failed to receive message size or client disconnected.\n";
         return false;
     }
+    uint32_t size = ntohl(net_size);
     string buffer(size, '\0');
-    if (recv(client_socket, buffer.data(), size, 0) <= 0) {
-        cerr << "Failed to receive full message" << endl;
+    size_t total_received = 0;
+    while (total_received < size) {
+        ssize_t r = recv(client_socket, buffer.data() + total_received, size - total_received, 0);
+        if (r <= 0) {
+            cerr << "Failed to receive full message.\n";
+            return false;
+        }
+        total_received += r;
+    }
+    try {
+        msg = Message::deserialize(buffer);
+    } catch (const exception &e) {
+        cerr << "Deserialization failed: " << e.what() << "\n";
         return false;
     }
-    msg = Message::deserialize(buffer);
     return true;
 }
 
-/**
- * Sends message to the client socket given.
- * @param client_socket The node's socket id.
- * @param msg Encapsulates information to send to the node.
- */
 void send_message(int client_socket, const Message &msg) {
     string serialized = msg.serialize();
-    uint32_t size = serialized.size();
-    send(client_socket, &size, sizeof(size), 0);
-    send(client_socket, serialized.c_str(), serialized.size(), 0);
+    uint32_t size = htonl(static_cast<uint32_t>(serialized.size()));
+    if (send(client_socket, &size, sizeof(size), 0) != sizeof(size)) {
+        cerr << "Failed to send message size.\n";
+        return;
+    }
+    const char *data = serialized.c_str();
+    size_t total_sent = 0;
+    size_t total_size = serialized.size();
+    while (total_sent < total_size) {
+        ssize_t sent = send(client_socket, data + total_sent, total_size - total_sent, 0);
+        if (sent <= 0) {
+            cerr << "Failed to send full message.\n";
+            return;
+        }
+        total_sent += sent;
+    }
 }
 
-/**
- * Starts the connection with the server
- * @param server_ip
- * @param server_port
- */
 void start_conn(const string &server_ip, int server_port) {
     int sock;
     bool ipv6;
@@ -169,9 +178,11 @@ void crack_password(int thread_id, long long start, long long end, const string 
             return;
         }
         total_guesses++;
+        if ((total_guesses % 1000) == 0) {
+            cout << total_guesses << endl;
+        }
     }
 }
-
 
 bool divide_work(int num_threads, const string& hashed_password, const string& salt,
                  long long total_start, long long total_end) {
@@ -182,7 +193,9 @@ bool divide_work(int num_threads, const string& hashed_password, const string& s
     for (int i = 0; i < num_threads; ++i) {
         long long start = total_start + i * range_size;
         long long end = (i == num_threads - 1) ? total_end : start + range_size - 1;
+        thread_ranges[i] = {start, end};
         threads.emplace_back(crack_password, i, start, end, hashed_password, salt);
+        cout << "Thread: " << i << ",Range: " << thread_ranges[i].first << "-" << thread_ranges[i].second << endl;
     }
     for (auto& t : threads) {
         t.join();
