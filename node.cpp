@@ -139,7 +139,8 @@ bool request_work(int num_threads, string& hashed_password, string& salt) {
         hashed_password = resp.Assign_Data->hashed_password;
         salt = resp.Assign_Data->salt;
         cout << "Range received: " << start_range << "-" << end_range << endl;
-        return divide_work(num_threads, hashed_password, salt, start_range, end_range);
+        divide_work(num_threads, hashed_password, salt, start_range, end_range);
+        return true;
     } else if (received && resp.type == Message::STOP) {
         cout << "[!] Received STOP from server. Exiting..." << endl;
         password_found.store(true);
@@ -170,17 +171,18 @@ void crack_password(int thread_id, long long start, long long end, const string 
         }
         size_t gen_hash_len = strlen(gen_hash);
         if (gen_hash_len == target_hash_len && memcmp(gen_hash, hashed_pwd, gen_hash_len) == 0) {
-            password_found.store(true);
+            password_found = true;
             {
                 lock_guard<mutex> lock(mtx);
                 cout << "[+] Password found by thread " << thread_id << ":" << pwd_guess << endl;
             }
             return;
         }
+        cout << "Guess: " << pwd_guess << endl;
         total_guesses++;
-        if ((total_guesses % 1000) == 0) {
-            cout << total_guesses << endl;
-        }
+//        if ((total_guesses % 1000) == 0) {
+//            cout << total_guesses << endl;
+//        }
     }
 }
 
@@ -221,19 +223,24 @@ int main(int argc, char *argv[]) {
     string hashed_password, salt;
     start_conn(server_ip, server_port);
     while (true) {
-        bool work_done = request_work(num_threads, hashed_password, salt);
         if (password_found.load()) {
             cout << "Password Found. Stopping worker node.\n";
             break;
         }
-        Message stop_msg;
-        if (!work_done) {
-            if (recv_message(worker_socket, stop_msg) && stop_msg.type == Message::STOP) {
-                cout << "Received STOP signal from server. Exiting...\n";
+        if (!request_work(num_threads, hashed_password, salt)) {
+            Message maybe_stop;
+            if (recv_message(worker_socket, maybe_stop) && maybe_stop.type == Message::STOP) {
+                cout << "Received STOP from server. Exiting...\n";
                 break;
             }
+            cout << "[*] No work assigned. Retrying...\n";
+            this_thread::sleep_for(chrono::seconds(1));
+            continue;
         }
-        this_thread::sleep_for(chrono::milliseconds(100));
+        if (!password_found.load()) {
+            cout << "[*] Batch complete. Requesting more work...\n";
+            this_thread::sleep_for(chrono::milliseconds(100));
+        }
     }
 
     close(worker_socket);
