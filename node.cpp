@@ -156,7 +156,12 @@ void crack_password(int thread_id, long long start, long long end, const string 
     size_t target_hash_len = hashed_password.length();
     const char *hashed_pwd = hashed_password.c_str();
     const char *pwd_salt = salt.c_str();
-    for (long long i = start; i <= end && !password_found; ++i) {
+    bool found = false;
+    for (long long i = start; i <= end && !found; ++i) {
+        if (i % 1000 == 0) {
+            found = password_found.load();
+            if (found) break;
+        }
         long long idx = i;
         size_t len = 0;
         while (idx || len == 0) {
@@ -171,18 +176,18 @@ void crack_password(int thread_id, long long start, long long end, const string 
         }
         size_t gen_hash_len = strlen(gen_hash);
         if (gen_hash_len == target_hash_len && memcmp(gen_hash, hashed_pwd, gen_hash_len) == 0) {
-            password_found = true;
-            {
+            bool expected = false;
+            if (password_found.compare_exchange_strong(expected, true)) {
                 lock_guard<mutex> lock(mtx);
                 cout << "[+] Password found by thread " << thread_id << ":" << pwd_guess << endl;
+                Message found_msg(Message::FOUND);
+                found_msg.Found_Data->pwd_idx = i;
+                send_message(worker_socket, found_msg);
             }
             return;
         }
-        cout << "Guess: " << pwd_guess << endl;
+//        cout << "Guess: " << pwd_guess << endl;
         total_guesses++;
-//        if ((total_guesses % 1000) == 0) {
-//            cout << total_guesses << endl;
-//        }
     }
 }
 
@@ -192,15 +197,16 @@ bool divide_work(int num_threads, const string& hashed_password, const string& s
     thread_ranges.resize(num_threads);
     long long range_size = (total_end - total_start + 1) / num_threads;
     vector<thread> threads;
+    threads.reserve(num_threads);
     for (int i = 0; i < num_threads; ++i) {
         long long start = total_start + i * range_size;
         long long end = (i == num_threads - 1) ? total_end : start + range_size - 1;
         thread_ranges[i] = {start, end};
         threads.emplace_back(crack_password, i, start, end, hashed_password, salt);
-        cout << "Thread: " << i << ",Range: " << thread_ranges[i].first << "-" << thread_ranges[i].second << endl;
+        cout << "Thread: " << i + 1 << ",Range: " << thread_ranges[i].first << "-" << thread_ranges[i].second << endl;
     }
     for (auto& t : threads) {
-        t.join();
+        if (t.joinable()) t.detach();
     }
     return password_found.load();
 }
@@ -225,14 +231,16 @@ int main(int argc, char *argv[]) {
     while (true) {
         if (password_found.load()) {
             cout << "Password Found. Stopping worker node.\n";
-            break;
-        }
-        if (!request_work(num_threads, hashed_password, salt)) {
             Message maybe_stop;
             if (recv_message(worker_socket, maybe_stop) && maybe_stop.type == Message::STOP) {
                 cout << "Received STOP from server. Exiting...\n";
                 break;
             }
+            this_thread::sleep_for(chrono::milliseconds(100));
+            continue;
+        }
+        if (!request_work(num_threads, hashed_password, salt)) {
+
             cout << "[*] No work assigned. Retrying...\n";
             this_thread::sleep_for(chrono::seconds(1));
             continue;
