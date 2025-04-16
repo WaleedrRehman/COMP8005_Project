@@ -243,7 +243,8 @@ int main(int argc, char *argv[]) {
                 if (recv_message(worker_socket, maybe_stop)) {
                     if (maybe_stop.type == Message::STOP) {
                         cout << "[✓] Received STOP from server. Shutting down...\n";
-                        break;  // Properly exit after STOP message.
+                        close(worker_socket);
+                        return 0;
                     } else {
                         cout << "[*] Received message: " << messages_text[maybe_stop.type] << endl;
                     }
