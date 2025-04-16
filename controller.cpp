@@ -38,8 +38,8 @@ void reassign_remaining_work(int client_sock);
 void handle_found(int node_id, long long pwd_idx);
 void assign_work(int node_id, long long work_size);
 vector<string> messages_text{"REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP", "CONTINUE"};
-constexpr int PRINTABLE_RANGE = 95;
-constexpr int BASE_ASCII = 32;
+constexpr int PRINTABLE_RANGE = 71;
+constexpr int BASE_ASCII = 60;
 chrono::steady_clock::time_point first_node_connection_time;
 
 void signal_handler(int signum) {
@@ -94,11 +94,8 @@ bool recv_message(int client_socket, Message &msg) {
         msg = Message::deserialize(buffer);
     } catch (const std::exception &e) {
         cerr << "[recv_message] Deserialization error: " << e.what() << endl;
-//        return false;
+        return false;
     }
-
-
-
     return true;
 }
 
@@ -251,12 +248,6 @@ void start_server(int port, long long work_size, int timeout_seconds) {
             }
         }
     }
-//    auto end_time = chrono::steady_clock::now();
-//    auto duration = chrono::duration_cast<chrono::seconds>(end_time - server_start_time).count();
-//    if (password_found.load()) {
-//        cout << "Time taken to crack password: " << duration << " seconds." << endl;
-//        cout << "Password Found." << endl;
-//    }
     close(serv_sock);
 }
 
@@ -272,18 +263,14 @@ void handle_found(int node_id, long long pwd_idx) {
         correct_password = index_to_password(pwd_idx);
         cout << "PASSWORD FOUND BY NODE " << node_id << ": " << correct_password << endl;
 
-        // Calculate time difference between the first node connection and password found
         auto end_time = chrono::steady_clock::now();
         auto duration = chrono::duration_cast<chrono::seconds>(end_time - first_node_connection_time).count();
         cout << "Time taken to find password after first node connected: " << duration << " seconds." << endl;
 
-        // Send a STOP message to the client that found the password
         Message stop_msg(Message::STOP);
         send_message(node_id, stop_msg);
 
-        // Optionally, add a brief delay before shutting down the connection
 
-        // Close the connection gracefully
         close(node_id);
         FD_CLR(node_id, &read_fds);
 
@@ -315,6 +302,17 @@ void assign_work(int node_id, long long work_size) {
     node_last_seen[node_id] = std::chrono::steady_clock::now();
     Message assign(Message::ASSIGN, Message::Assign{node_id, checkpoint_interval, range, hashed_password, salt});
     send_message(node_id, assign);
+}
+
+unordered_map<string, string> parse_flags(int argc, char *argv[]) {
+    unordered_map<string, string> flags;
+    for (int i = 1; i < argc; i += 2) {
+        if (argv[i][0] == '-' && argv[i][1] == '-') {  // Check for --flag
+            string flag = argv[i] + 2;  // Skip "--"
+            flags[flag] = (i + 1 < argc) ? argv[i + 1] : "";
+        }
+    }
+    return flags;
 }
 
 int main(int argc, char *argv[]) {

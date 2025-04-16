@@ -26,9 +26,8 @@ atomic<bool> password_found(false);
 long long pwd_idx;
 
 vector<pair<long long, long long>> thread_ranges;
-atomic<long long> total_guesses(0);
-constexpr int PRINTABLE_RANGE = 95;
-constexpr int BASE_ASCII = 32;
+constexpr int PRINTABLE_RANGE = 71;
+constexpr int BASE_ASCII = 60;
 
 bool divide_work(int num_threads, const string& hashed_password, const string& salt, long long total_start, long long total_end);
 

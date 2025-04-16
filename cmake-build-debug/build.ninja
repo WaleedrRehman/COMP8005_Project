@@ -51,13 +51,13 @@ build cmake_object_order_depends_target_COMP8005_Project: phony || .
 
 build CMakeFiles/COMP8005_Project.dir/Message.cpp.o: CXX_COMPILER__COMP8005_Project_unscanned_Debug /home/waleed/COMP8005/COMP8005_Assign_3/Message.cpp || cmake_object_order_depends_target_COMP8005_Project
   DEP_FILE = CMakeFiles/COMP8005_Project.dir/Message.cpp.o.d
-  FLAGS = -g -std=gnu++17 -fdiagnostics-color=always
+  FLAGS = -g -std=gnu++20 -fdiagnostics-color=always
   OBJECT_DIR = CMakeFiles/COMP8005_Project.dir
   OBJECT_FILE_DIR = CMakeFiles/COMP8005_Project.dir
 
 build CMakeFiles/COMP8005_Project.dir/controller.cpp.o: CXX_COMPILER__COMP8005_Project_unscanned_Debug /home/waleed/COMP8005/COMP8005_Assign_3/controller.cpp || cmake_object_order_depends_target_COMP8005_Project
   DEP_FILE = CMakeFiles/COMP8005_Project.dir/controller.cpp.o.d
-  FLAGS = -g -std=gnu++17 -fdiagnostics-color=always
+  FLAGS = -g -std=gnu++20 -fdiagnostics-color=always
   OBJECT_DIR = CMakeFiles/COMP8005_Project.dir
   OBJECT_FILE_DIR = CMakeFiles/COMP8005_Project.dir
 
