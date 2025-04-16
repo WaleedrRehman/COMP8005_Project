@@ -37,7 +37,8 @@ void reassign_remaining_work(int client_sock);
 void handle_found(int node_id, long long pwd_idx);
 void assign_work(int node_id, long long work_size);
 vector<string> messages_text{"REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP", "CONTINUE"};
-constexpr int ASCII_RANGE = 256;
+constexpr int PRINTABLE_RANGE = 95;
+constexpr int BASE_ASCII = 32;
 
 void signal_handler(int signum) {
     cout << "\nSignal (" << signum << ") received. Shutting down..." << endl;
@@ -47,8 +48,8 @@ void signal_handler(int signum) {
 string index_to_password(long long index) {
     string password;
     while (index || password.empty()) {
-        password.insert(password.begin(), static_cast<char>(index % ASCII_RANGE));
-        index /= ASCII_RANGE;
+        password.insert(password.begin(), static_cast<char>((index % PRINTABLE_RANGE) + BASE_ASCII));
+        index /= PRINTABLE_RANGE;
     }
     return password;
 }
@@ -91,8 +92,10 @@ bool recv_message(int client_socket, Message &msg) {
         msg = Message::deserialize(buffer);
     } catch (const std::exception &e) {
         cerr << "[recv_message] Deserialization error: " << e.what() << endl;
-        return false;
+//        return false;
     }
+
+
 
     return true;
 }
@@ -267,8 +270,19 @@ void handle_found(int node_id, long long pwd_idx) {
     if (!password_found.exchange(true)) {
         correct_password = index_to_password(pwd_idx);
         cout << "PASSWORD FOUND BY NODE " << node_id << ": " << correct_password << endl;
+
+        // Send a STOP message to the client that found the password
+        Message stop_msg(Message::STOP);
+        send_message(node_id, stop_msg);
+
+        // Optionally, add a brief delay before shutting down the connection
+
+        // Close the connection gracefully
+        close(node_id);
+        FD_CLR(node_id, &read_fds);
     }
 }
+
 
 void assign_work(int node_id, long long work_size) {
     pair<long long, long long> range;

@@ -23,6 +23,7 @@ vector<string> messages_text{"REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP",
 long long start_range, end_range;
 atomic<bool> password_found(false);
 
+long long pwd_idx;
 
 vector<pair<long long, long long>> thread_ranges;
 atomic<long long> total_guesses(0);
@@ -149,7 +150,8 @@ bool request_work(int num_threads, string& hashed_password, string& salt) {
     return false;
 }
 
-void crack_password(int thread_id, long long start, long long end, const string &hashed_password, const string &salt) {
+void crack_password(int thread_id, long long start, long long end,
+                    const string &hashed_password, const string &salt) {
     thread_local struct crypt_data crypt_buffer{};
     crypt_buffer.initialized = 0;
     char pwd_guess[256];
@@ -160,7 +162,8 @@ void crack_password(int thread_id, long long start, long long end, const string 
     for (long long i = start; i <= end && !found; ++i) {
         if (i % 1000 == 0) {
             found = password_found.load();
-            if (found) break;
+            if (found)
+                break;
         }
         long long idx = i;
         size_t len = 0;
@@ -175,21 +178,24 @@ void crack_password(int thread_id, long long start, long long end, const string 
             continue;
         }
         size_t gen_hash_len = strlen(gen_hash);
-        if (gen_hash_len == target_hash_len && memcmp(gen_hash, hashed_pwd, gen_hash_len) == 0) {
-            bool expected = false;
-            if (password_found.compare_exchange_strong(expected, true)) {
-                lock_guard<mutex> lock(mtx);
-                cout << "[+] Password found by thread " << thread_id << ":" << pwd_guess << endl;
+        if (gen_hash_len == target_hash_len &&
+            memcmp(gen_hash, hashed_pwd, gen_hash_len) == 0) {
+
+            lock_guard<mutex> lock(mtx);
+            if (!password_found.exchange(true)) {
+                cout << "[+] Password found by thread " << thread_id << ": " << pwd_guess << endl;
+                pwd_idx = i;
+
+                // Send FOUND message to server
                 Message found_msg(Message::FOUND);
-                found_msg.Found_Data->pwd_idx = i;
+                found_msg.Found_Data = Message::Found{worker_socket, pwd_idx};
                 send_message(worker_socket, found_msg);
             }
             return;
         }
-//        cout << "Guess: " << pwd_guess << endl;
-        total_guesses++;
     }
 }
+
 
 bool divide_work(int num_threads, const string& hashed_password, const string& salt,
                  long long total_start, long long total_end) {
@@ -231,15 +237,15 @@ int main(int argc, char *argv[]) {
     while (true) {
         if (password_found.load()) {
             cout << "Password Found. Waiting for server to send STOP...\n";
+
             Message maybe_stop;
             while (true) {
                 if (recv_message(worker_socket, maybe_stop)) {
                     if (maybe_stop.type == Message::STOP) {
                         cout << "[✓] Received STOP from server. Shutting down...\n";
-                        close(worker_socket);
-                        return 0;
+                        break;  // Properly exit after STOP message.
                     } else {
-                        cout << "[!] Unexpected message after FOUND. Type: " << messages_text[maybe_stop.type] << endl;
+                        cout << "[*] Received message: " << messages_text[maybe_stop.type] << endl;
                     }
                 } else {
                     cerr << "[!] Error or disconnect while waiting for STOP. Retrying...\n";
@@ -257,6 +263,7 @@ int main(int argc, char *argv[]) {
         if (!password_found.load()) {
             cout << "[*] Batch complete. Requesting more work...\n";
             this_thread::sleep_for(chrono::milliseconds(100));
+            continue;
         }
     }
 
