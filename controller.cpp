@@ -32,6 +32,7 @@ static atomic<long long> next_range_start(0);
 
 // Network State
 fd_set read_fds;
+int max_fd, serv_sock;
 
 void reassign_remaining_work(int client_sock);
 void handle_found(int node_id, long long pwd_idx);
@@ -39,6 +40,7 @@ void assign_work(int node_id, long long work_size);
 vector<string> messages_text{"REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP", "CONTINUE"};
 constexpr int PRINTABLE_RANGE = 95;
 constexpr int BASE_ASCII = 32;
+chrono::steady_clock::time_point first_node_connection_time;
 
 void signal_handler(int signum) {
     cout << "\nSignal (" << signum << ") received. Shutting down..." << endl;
@@ -183,7 +185,7 @@ void handle_message(int client_sock, long long work_size) {
     }
 }
 void start_server(int port, long long work_size, int timeout_seconds) {
-    int serv_sock = socket(AF_INET6, SOCK_STREAM, 0);
+    serv_sock = socket(AF_INET6, SOCK_STREAM, 0);
     if (serv_sock < 0) {
         cerr << "Socket creation failed.\n";
         exit(1);
@@ -202,8 +204,9 @@ void start_server(int port, long long work_size, int timeout_seconds) {
     listen(serv_sock, MAX_CLIENTS);
     FD_ZERO(&read_fds);
     FD_SET(serv_sock, &read_fds);
-    int max_fd = serv_sock;
+    max_fd = serv_sock;
     cout << "Server started on port: " << port << endl;
+
     while (!password_found && !shutdown_requested.load()) {
         fd_set temp_fds = read_fds;
         timeval tv{.tv_sec = timeout_seconds, .tv_usec = 0};
@@ -218,19 +221,24 @@ void start_server(int port, long long work_size, int timeout_seconds) {
                 if (client_sock < 0) continue;
                 FD_SET(client_sock, &read_fds);
                 if (client_sock > max_fd) max_fd = client_sock;
+
                 cout << "New client connected. Node id: " << client_sock << endl;
+
+                // Track the time of the first client connection
+                if (first_node_connection_time == chrono::steady_clock::time_point()) {
+                    first_node_connection_time = chrono::steady_clock::now();
+                }
             } else {
                 handle_message(fd, work_size);
             }
         }
+
         // Handle disconnections (timeouts)
         auto now = chrono::steady_clock::now();
         lock_guard<mutex> lock(global_mutex);
         for (auto it = node_last_seen.begin(); it != node_last_seen.end();) {
             int node_id = it->first;
             auto last_seen = it->second;
-//            cout << "Node: " << node_id << " last seen at: "
-//                 << chrono::duration_cast<chrono::seconds>(last_seen.time_since_epoch()).count() << endl;
             if (chrono::duration_cast<chrono::seconds>(now - last_seen).count() > timeout_seconds) {
                 cerr << "Node: " << node_id << " timed out\n";
                 close(node_id);
@@ -243,19 +251,12 @@ void start_server(int port, long long work_size, int timeout_seconds) {
             }
         }
     }
-    auto end_time = chrono::steady_clock::now();
-    auto duration = chrono::duration_cast<chrono::seconds>(end_time - server_start_time).count();
-    if (password_found.load()) {
-        cout << "Time taken to crack password: " << duration << " seconds." << endl;
-        cout << "Password Found." << endl;
-    }
-    // Send STOP message to all clients
-    for (int fd = 0; fd <= max_fd; ++fd) {
-        if (FD_ISSET(fd, &read_fds) && fd != serv_sock) {
-            send_message(fd, Message(Message::STOP));
-            close(fd);
-        }
-    }
+//    auto end_time = chrono::steady_clock::now();
+//    auto duration = chrono::duration_cast<chrono::seconds>(end_time - server_start_time).count();
+//    if (password_found.load()) {
+//        cout << "Time taken to crack password: " << duration << " seconds." << endl;
+//        cout << "Password Found." << endl;
+//    }
     close(serv_sock);
 }
 
@@ -271,6 +272,11 @@ void handle_found(int node_id, long long pwd_idx) {
         correct_password = index_to_password(pwd_idx);
         cout << "PASSWORD FOUND BY NODE " << node_id << ": " << correct_password << endl;
 
+        // Calculate time difference between the first node connection and password found
+        auto end_time = chrono::steady_clock::now();
+        auto duration = chrono::duration_cast<chrono::seconds>(end_time - first_node_connection_time).count();
+        cout << "Time taken to find password after first node connected: " << duration << " seconds." << endl;
+
         // Send a STOP message to the client that found the password
         Message stop_msg(Message::STOP);
         send_message(node_id, stop_msg);
@@ -280,6 +286,14 @@ void handle_found(int node_id, long long pwd_idx) {
         // Close the connection gracefully
         close(node_id);
         FD_CLR(node_id, &read_fds);
+
+        // Send STOP message to all other clients
+        for (int fd = 0; fd <= max_fd; ++fd) {
+            if (FD_ISSET(fd, &read_fds) && fd != serv_sock) {
+                send_message(fd, Message(Message::STOP));
+                close(fd);
+            }
+        }
     }
 }
 

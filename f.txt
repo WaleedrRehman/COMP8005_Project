@@ -1,0 +1,2 @@
+g++ -std=c++17 -pthread node.cpp Message.cpp -o node -lcrypt -O3 -flto -ftree-parallelize-loops=4
+

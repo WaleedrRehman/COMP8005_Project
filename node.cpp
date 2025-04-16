@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
                     }
                 } else {
                     cerr << "[!] Error or disconnect while waiting for STOP. Retrying...\n";
-                    this_thread::sleep_for(chrono::milliseconds(200));
+                    this_thread::sleep_for(chrono::seconds(2));
                 }
             }
             continue;  // Check stop_received in outer loop
