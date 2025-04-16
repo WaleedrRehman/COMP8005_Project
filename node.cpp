@@ -1,7 +1,3 @@
-//
-// Created by waleed on 26/03/25.
-//
-
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,6 +10,7 @@
 #include <algorithm>
 #include <mutex>
 #include <unistd.h>
+#include <csignal>
 
 using namespace std;
 int worker_socket;
@@ -29,7 +26,14 @@ vector<pair<long long, long long>> thread_ranges;
 constexpr int PRINTABLE_RANGE = 57;
 constexpr int BASE_ASCII = 48;
 
+atomic<bool> shutdown_requested(false);
+
 bool divide_work(int num_threads, const string& hashed_password, const string& salt, long long total_start, long long total_end);
+
+void signal_handler(int signum) {
+    cout << "\nSignal (" << signum << ") received. Shutting down..." << endl;
+    shutdown_requested.store(true);
+}
 
 bool recv_message(int client_socket, Message &msg) {
     uint32_t net_size;
@@ -143,7 +147,7 @@ bool request_work(int num_threads, string& hashed_password, string& salt) {
         return true;
     } else if (received && resp.type == Message::STOP) {
         cout << "[!] Received STOP from server. Exiting..." << endl;
-        password_found.store(true);
+        shutdown_requested.store(true);
         return false;
     }
     return false;
@@ -157,13 +161,8 @@ void crack_password(int thread_id, long long start, long long end,
     size_t target_hash_len = hashed_password.length();
     const char *hashed_pwd = hashed_password.c_str();
     const char *pwd_salt = salt.c_str();
-    bool found = false;
-    for (long long i = start; i <= end && !found; ++i) {
-//        if (i % 1000 == 0) {
-//            found = password_found.load();
-//            if (found)
-//                break;
-//        }
+    for (long long i = start; i <= end; ++i) {
+        if (password_found.load() || shutdown_requested.load()) break;
         long long idx = i;
         size_t len = 0;
         while (idx || len == 0) {
@@ -222,6 +221,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     string server_ip = argv[1];
     int server_port = stoi(argv[2]);
     int num_threads = stoi(argv[3]);
@@ -241,6 +243,10 @@ int main(int argc, char *argv[]) {
     bool stop_received = false;
 
     while (!stop_received) {
+        if (shutdown_requested.load()) {
+            break;
+        }
+
         if (password_found.load()) {
             cout << "Password Found. Waiting for server to send STOP...\n";
 
@@ -264,7 +270,7 @@ int main(int argc, char *argv[]) {
 
         if (!request_work(num_threads, hashed_password, salt)) {
             cout << "[*] No work assigned. Retrying...\n";
-            this_thread::sleep_for(chrono::seconds(1));
+            this_thread::sleep_for(chrono::seconds(3));
             continue;
         }
 

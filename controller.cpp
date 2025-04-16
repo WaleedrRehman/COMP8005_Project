@@ -41,10 +41,12 @@ vector<string> messages_text{"REQUEST", "ASSIGN", "CHECKPOINT", "FOUND", "STOP",
 constexpr int PRINTABLE_RANGE = 71;
 constexpr int BASE_ASCII = 60;
 chrono::steady_clock::time_point first_node_connection_time;
+void graceful_shutdown();
 
 void signal_handler(int signum) {
     cout << "\nSignal (" << signum << ") received. Shutting down..." << endl;
     shutdown_requested.store(true);
+    graceful_shutdown();
 }
 
 string index_to_password(long long index) {
@@ -150,6 +152,35 @@ void extract_salt(char *hashed_pwd, char *salt_buffer, size_t buffer_size) {
     }
     strncpy(salt_buffer, hashed_pwd, salt_len);
     salt_buffer[salt_len] = '\0';
+}
+
+void graceful_shutdown() {
+    cout << "Shutting down all nodes" << endl;
+
+    lock_guard<mutex> lock(global_mutex);
+    vector<int> closed_nodes;
+    for (const auto& [active_node, _]: active_nodes) {
+        send_message(active_node, Message(Message::STOP));
+        closed_nodes.push_back(active_node);
+    }
+
+    sleep(5);
+
+    for (int node_id : closed_nodes) {
+        close(node_id);
+        FD_CLR(node_id, &read_fds);
+        active_nodes.erase(node_id);
+        node_last_seen.erase(node_id);
+    }
+
+    if (serv_sock >= 0) {
+        close(serv_sock);
+        serv_sock = -1;
+    }
+
+    if (shutdown_requested) {
+        remaining_work.clear();
+    }
 }
 
 void handle_message(int client_sock, long long work_size) {
@@ -320,6 +351,7 @@ int main(int argc, char *argv[]) {
         cerr << "Usage: " << argv[0] << " --port --hash --work-size --checkpoint_interval --timeout\n";
         return 1;
     }
+
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, signal_handler);
