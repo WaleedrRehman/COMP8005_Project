@@ -26,8 +26,8 @@ atomic<bool> password_found(false);
 long long pwd_idx;
 
 vector<pair<long long, long long>> thread_ranges;
-constexpr int PRINTABLE_RANGE = 71;
-constexpr int BASE_ASCII = 60;
+constexpr int PRINTABLE_RANGE = 57;
+constexpr int BASE_ASCII = 48;
 
 bool divide_work(int num_threads, const string& hashed_password, const string& salt, long long total_start, long long total_end);
 
@@ -159,11 +159,11 @@ void crack_password(int thread_id, long long start, long long end,
     const char *pwd_salt = salt.c_str();
     bool found = false;
     for (long long i = start; i <= end && !found; ++i) {
-        if (i % 1000 == 0) {
-            found = password_found.load();
-            if (found)
-                break;
-        }
+//        if (i % 1000 == 0) {
+//            found = password_found.load();
+//            if (found)
+//                break;
+//        }
         long long idx = i;
         size_t len = 0;
         while (idx || len == 0) {
@@ -211,7 +211,7 @@ bool divide_work(int num_threads, const string& hashed_password, const string& s
         cout << "Thread: " << i + 1 << ",Range: " << thread_ranges[i].first << "-" << thread_ranges[i].second << endl;
     }
     for (auto& t : threads) {
-        if (t.joinable()) t.detach();
+        if (t.joinable()) t.join();
     }
     return password_found.load();
 }
