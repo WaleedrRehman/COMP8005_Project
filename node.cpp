@@ -28,7 +28,8 @@ constexpr int BASE_ASCII = 48;
 
 atomic<bool> shutdown_requested(false);
 
-bool divide_work(int num_threads, const string& hashed_password, const string& salt, long long total_start, long long total_end);
+bool divide_work(int num_threads, const string &hashed_password, const string &salt, long long total_start,
+                 long long total_end);
 
 void signal_handler(int signum) {
     cout << "\nSignal (" << signum << ") received. Shutting down..." << endl;
@@ -129,7 +130,7 @@ void start_conn(const string &server_ip, int server_port) {
     worker_socket = sock;
 }
 
-bool request_work(int num_threads, string& hashed_password, string& salt) {
+bool request_work(int num_threads, string &hashed_password, string &salt) {
     cout << "Requesting Work from Controller" << endl;
     Message request_msg(Message::REQUEST);
     send_message(worker_socket, request_msg);
@@ -195,7 +196,7 @@ void crack_password(int thread_id, long long start, long long end,
 }
 
 
-bool divide_work(int num_threads, const string& hashed_password, const string& salt,
+bool divide_work(int num_threads, const string &hashed_password, const string &salt,
                  long long total_start, long long total_end) {
     cout << "Dividing work across " << num_threads << " threads." << endl;
     thread_ranges.resize(num_threads);
@@ -209,7 +210,7 @@ bool divide_work(int num_threads, const string& hashed_password, const string& s
         threads.emplace_back(crack_password, i, start, end, hashed_password, salt);
         cout << "Thread: " << i + 1 << ",Range: " << thread_ranges[i].first << "-" << thread_ranges[i].second << endl;
     }
-    for (auto& t : threads) {
+    for (auto &t: threads) {
         if (t.joinable()) t.join();
     }
     return password_found.load();
@@ -244,46 +245,29 @@ int main(int argc, char *argv[]) {
 
     while (!stop_received) {
         if (shutdown_requested.load()) {
-            break;
-        }
-
-        if (password_found.load()) {
-            cout << "Password Found. Waiting for server to send STOP...\n";
-
-            Message maybe_stop;
-            while (true) {
-                if (recv_message(worker_socket, maybe_stop)) {
-                    if (maybe_stop.type == Message::STOP) {
-                        cout << "[✓] Received STOP from server. Shutting down...\n";
-                        stop_received = true;
-                        break;  // Exit inner loop
-                    } else {
-                        cout << "[*] Received message: " << messages_text[maybe_stop.type] << endl;
-                    }
-                } else {
-                    cerr << "[!] Error or disconnect while waiting for STOP. Retrying...\n";
-                    this_thread::sleep_for(chrono::seconds(2));
-                }
-            }
-            continue;  // Check stop_received in outer loop
-        }
-
-        if (!request_work(num_threads, hashed_password, salt)) {
-            cout << "[*] No work assigned. Retrying...\n";
-            this_thread::sleep_for(chrono::seconds(3));
+            stop_received = true;
             continue;
         }
-
-        if (!password_found.load()) {
-            cout << "[*] Batch complete. Requesting more work...\n";
+        if (password_found.load()) {
+            cout << "Password Found. Waiting for server to send STOP...\n";
+            Message maybe_stop;
+            if (recv_message(worker_socket, maybe_stop)) {
+                if (maybe_stop.type == Message::STOP) {
+                    cout << "[✓] Received STOP from server. Shutting down...\n";
+                    stop_received = true;
+                }
+            }
             this_thread::sleep_for(chrono::milliseconds(100));
             continue;
         }
+        if (!request_work(num_threads, hashed_password, salt)) {
+            stop_received = true;
+            continue;
+        }
+
+        this_thread::sleep_for(chrono::milliseconds (500));
     }
 
     close(worker_socket);
     return 0;
 }
-
-
-

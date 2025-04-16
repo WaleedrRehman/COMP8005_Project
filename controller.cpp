@@ -162,7 +162,9 @@ void graceful_shutdown() {
     for (const auto& [active_node, _]: active_nodes) {
         send_message(active_node, Message(Message::STOP));
         closed_nodes.push_back(active_node);
+        cout << "Shutting down node: " << active_node << endl;
     }
+
 
     sleep(5);
 
