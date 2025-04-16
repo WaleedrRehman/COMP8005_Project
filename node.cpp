@@ -222,19 +222,26 @@ int main(int argc, char *argv[]) {
         cerr << "Usage: " << argv[0] << " --server --port --thread\n";
         return 1;
     }
+
     string server_ip = argv[1];
     int server_port = stoi(argv[2]);
     int num_threads = stoi(argv[3]);
+
     if (num_threads < 1) {
-        cerr << "Error: At least 1 thread needed to run. \n";
+        cerr << "Error: At least 1 thread needed to run.\n";
         return 1;
     }
+
     cout << "Server IP: " << server_ip << endl;
     cout << "Server Port: " << server_port << endl;
     cout << "Number of Threads: " << num_threads << endl;
+
     string hashed_password, salt;
     start_conn(server_ip, server_port);
-    while (true) {
+
+    bool stop_received = false;
+
+    while (!stop_received) {
         if (password_found.load()) {
             cout << "Password Found. Waiting for server to send STOP...\n";
 
@@ -243,8 +250,8 @@ int main(int argc, char *argv[]) {
                 if (recv_message(worker_socket, maybe_stop)) {
                     if (maybe_stop.type == Message::STOP) {
                         cout << "[✓] Received STOP from server. Shutting down...\n";
-                        close(worker_socket);
-                        return 0;
+                        stop_received = true;
+                        break;  // Exit inner loop
                     } else {
                         cout << "[*] Received message: " << messages_text[maybe_stop.type] << endl;
                     }
@@ -253,6 +260,7 @@ int main(int argc, char *argv[]) {
                     this_thread::sleep_for(chrono::milliseconds(200));
                 }
             }
+            continue;  // Check stop_received in outer loop
         }
 
         if (!request_work(num_threads, hashed_password, salt)) {
@@ -271,5 +279,6 @@ int main(int argc, char *argv[]) {
     close(worker_socket);
     return 0;
 }
+
 
 
