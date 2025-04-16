@@ -230,21 +230,30 @@ int main(int argc, char *argv[]) {
     start_conn(server_ip, server_port);
     while (true) {
         if (password_found.load()) {
-            cout << "Password Found. Stopping worker node.\n";
+            cout << "Password Found. Waiting for server to send STOP...\n";
             Message maybe_stop;
-            if (recv_message(worker_socket, maybe_stop) && maybe_stop.type == Message::STOP) {
-                cout << "Received STOP from server. Exiting...\n";
-                break;
+            while (true) {
+                if (recv_message(worker_socket, maybe_stop)) {
+                    if (maybe_stop.type == Message::STOP) {
+                        cout << "[✓] Received STOP from server. Shutting down...\n";
+                        close(worker_socket);
+                        return 0;
+                    } else {
+                        cout << "[!] Unexpected message after FOUND. Type: " << messages_text[maybe_stop.type] << endl;
+                    }
+                } else {
+                    cerr << "[!] Error or disconnect while waiting for STOP. Retrying...\n";
+                    this_thread::sleep_for(chrono::milliseconds(200));
+                }
             }
-            this_thread::sleep_for(chrono::milliseconds(100));
-            continue;
         }
-        if (!request_work(num_threads, hashed_password, salt)) {
 
+        if (!request_work(num_threads, hashed_password, salt)) {
             cout << "[*] No work assigned. Retrying...\n";
             this_thread::sleep_for(chrono::seconds(1));
             continue;
         }
+
         if (!password_found.load()) {
             cout << "[*] Batch complete. Requesting more work...\n";
             this_thread::sleep_for(chrono::milliseconds(100));

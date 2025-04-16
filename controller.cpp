@@ -22,7 +22,6 @@ atomic<bool> shutdown_requested(false);
 // Node Tracking
 unordered_map<int, pair<long long, long long>> active_nodes;
 unordered_map<int, chrono::steady_clock::time_point> node_last_seen;
-unordered_map<int, vector<pair<long long, long long>>> checkpoints;
 vector<pair<long long, long long>> remaining_work;
 chrono::steady_clock::time_point server_start_time;
 
@@ -43,10 +42,6 @@ constexpr int ASCII_RANGE = 256;
 void signal_handler(int signum) {
     cout << "\nSignal (" << signum << ") received. Shutting down..." << endl;
     shutdown_requested.store(true);
-}
-
-pair<long long, long long> get_range(long long start_idx, long long size) {
-    return {start_idx, start_idx + size - 1};
 }
 
 string index_to_password(long long index) {
@@ -231,8 +226,8 @@ void start_server(int port, long long work_size, int timeout_seconds) {
         for (auto it = node_last_seen.begin(); it != node_last_seen.end();) {
             int node_id = it->first;
             auto last_seen = it->second;
-            cout << "Node: " << node_id << " last seen at: "
-                 << chrono::duration_cast<chrono::seconds>(last_seen.time_since_epoch()).count() << endl;
+//            cout << "Node: " << node_id << " last seen at: "
+//                 << chrono::duration_cast<chrono::seconds>(last_seen.time_since_epoch()).count() << endl;
             if (chrono::duration_cast<chrono::seconds>(now - last_seen).count() > timeout_seconds) {
                 cerr << "Node: " << node_id << " timed out\n";
                 close(node_id);
@@ -296,7 +291,7 @@ void assign_work(int node_id, long long work_size) {
 
 int main(int argc, char *argv[]) {
     if (argc != 6) {
-        cerr << "Usage: " << argv[0] << " <port> <hash> <work-size> <checkpoint_interval> <timeout>\n";
+        cerr << "Usage: " << argv[0] << " --port --hash --work-size --checkpoint_interval --timeout\n";
         return 1;
     }
 
